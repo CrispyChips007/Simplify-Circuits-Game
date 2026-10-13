@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { relationship, reduceGraph, isSolved, nearlyEqual } from '../dist/src/solver.js';
+const e=(id,a,b,value)=>({id,a,b,value});
+const parallel={nodes:['A','B'],edges:[e('R1','A','B',12),e('R2','A','B',24),e('R3','A','B',8)],nextId:1};
+test('any parallel pair is valid',()=>{for(const pair of [['R1','R2'],['R1','R3'],['R2','R3']])assert.equal(relationship(parallel,pair).type,'parallel')});
+test('all parallel resistors can reduce in one turn',()=>{const result=reduceGraph(parallel,['R1','R2','R3']);assert.equal(result.ok,true);assert.equal(isSolved(result.graph),true);assert.ok(nearlyEqual(result.edge.value,4))});
+test('pair then remaining resistor reaches same total',()=>{const first=reduceGraph(parallel,['R1','R2']);const second=reduceGraph(first.graph,[first.edge.id,'R3']);assert.equal(second.ok,true);assert.ok(nearlyEqual(second.edge.value,4))});
+test('adjacent subset of a series chain is valid',()=>{const graph={nodes:['A','B','C','D'],edges:[e('R1','A','B',1),e('R2','B','C',2),e('R3','C','D',3)]};assert.equal(relationship(graph,['R1','R2']).type,'series')});
+test('a branch prevents a series reduction',()=>{const graph={nodes:['A','B','C','D'],edges:[e('R1','A','B',1),e('R2','B','C',2),e('RX','B','D',5)]};assert.equal(relationship(graph,['R1','R2']),null)});
