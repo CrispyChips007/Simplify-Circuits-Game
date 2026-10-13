@@ -8,8 +8,8 @@ let levelIndex=Math.max(0,Math.min(progress.unlocked-1,LEVELS.length-1));
 let state;
 
 const fmt=value=>Number.isInteger(value)?String(value):Number(value.toFixed(2)).toString();
-const resistor=(edge,x,y,vertical=false)=>{const w=vertical?76:126,h=vertical?88:62;return `<g class="resistor${state.selected.has(edge.id)?' selected':''}${state.hinted.has(edge.id)?' hinted':''}" data-id="${edge.id}" tabindex="0" role="button" transform="translate(${x-w/2} ${y-h/2})"><rect class="body" width="${w}" height="${h}" rx="13"/><text class="rid" x="${w/2}" y="${h/2-2}">${edge.label||edge.id}</text><text class="ohms" x="${w/2}" y="${h/2+18}">${fmt(edge.value)} Ω</text></g>`};
-const battery=()=>`<g><path class="wire" d="M90 195 V270"/><path class="battery-line" d="M68 220 H112 M77 242 H103"/><text class="battery-text" x="90" y="292">12 V</text></g>`;
+const resistor=(edge,x,y,vertical=false)=>{const w=vertical?76:126,h=vertical?88:62;return `<g class="resistor${state.selected.has(edge.id)?' selected':''}${state.hinted.has(edge.id)?' hinted':''}" data-id="${edge.id}" tabindex="0" role="button" transform="translate(${x-w/2} ${y-h/2})"><rect class="body" width="${w}" height="${h}" rx="2"/><text class="rid" x="${w/2}" y="${h/2-2}">${edge.label||edge.id}</text><text class="ohms" x="${w/2}" y="${h/2+18}">${fmt(edge.value)} Ω</text></g>`};
+const battery=(top,bottom)=>{const mid=(top+bottom)/2;return `<g><path class="wire" d="M90 ${top} V${mid-13} M90 ${mid+13} V${bottom}"/><path class="battery-line" d="M68 ${mid-7} H112 M77 ${mid+7} H103"/><text class="battery-text" x="61" y="${mid+4}">12 V</text></g>`};
 
 function renderCircuit(){
   if(state.level.trace){renderTrace();return}
@@ -17,15 +17,15 @@ function renderCircuit(){
   const allParallel=edges.length>1&&edges.every(e=>[e.a,e.b].sort().join('|')===[edges[0].a,edges[0].b].sort().join('|'));
   if(allParallel){
     const xs=edges.length===2?[310,500]:edges.length===3?[245,390,535]:edges.map((_,i)=>220+i*110);
-    $('#circuit').innerHTML=`<path class="wire" d="M90 100 H670 V300 H90 V100"/>${battery()}${edges.map((e,i)=>`<path class="wire" d="M${xs[i]} 100 V156 M${xs[i]} 244 V300"/><circle class="node" cx="${xs[i]}" cy="100" r="7"/><circle class="node" cx="${xs[i]}" cy="300" r="7"/>${resistor(e,xs[i],200,true)}`).join('')}`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 100 H650 M90 300 H650"/>${battery(100,300)}${edges.map((e,i)=>`<path class="wire" d="M${xs[i]} 100 V156 M${xs[i]} 244 V300"/><circle class="node" cx="${xs[i]}" cy="100" r="6"/><circle class="node" cx="${xs[i]}" cy="300" r="6"/>${resistor(e,xs[i],200,true)}`).join('')}`;
   }else if(edges.length===3&&state.level.layout==='mixed'){
     const [r1,r2,r3]=edges;
-    $('#circuit').innerHTML=`<path class="wire" d="M90 200 H190 M316 200 H370 M370 200 V115 H610 V200 M370 200 V285 H610 V200 H680 V300 H90 V200"/>${battery()}${resistor(r1,253,200)}${resistor(r2,490,115)}${resistor(r3,490,285)}<circle class="node" cx="370" cy="200" r="7"/><circle class="node" cx="610" cy="200" r="7"/>`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 200 H190 M316 200 H370 M370 200 V115 H427 M553 115 H610 V200 M370 200 V285 H427 M553 285 H610 V200 H680 V300 H90"/>${battery(200,300)}${resistor(r1,253,200)}${resistor(r2,490,115)}${resistor(r3,490,285)}<circle class="node" cx="370" cy="200" r="6"/><circle class="node" cx="610" cy="200" r="6"/>`;
   }else{
     const xs=edges.length===2?[300,475]:edges.map((_,i)=>280+i*150);
     let path='M90 200 H'+(xs[0]-63)+' ';
     edges.forEach((_,i)=>{path+=`M${xs[i]+63} 200 H${i===edges.length-1?680:xs[i+1]-63} `});
-    $('#circuit').innerHTML=`<path class="wire" d="${path}M680 200 V300 H90 V200"/>${battery()}${edges.map((e,i)=>resistor(e,xs[i],200)).join('')}`;
+    $('#circuit').innerHTML=`<path class="wire" d="${path}M680 200 V300 H90"/>${battery(200,300)}${edges.map((e,i)=>resistor(e,xs[i],200)).join('')}`;
   }
   bindResistors();
 }
@@ -33,8 +33,8 @@ function renderCircuit(){
 function renderTrace(expanded=false){
   if(expanded){
     const edges=[{id:'R1',label:'R1',value:10},{id:'R2',label:'R2',value:20},{id:'R3',label:'R3',value:30}];
-    $('#circuit').innerHTML=`<path class="wire" d="M90 200 H205 M591 200 H680 V300 H90 V200"/>${battery()}${edges.map((e,i)=>resistor(e,268+i*130,200)).join('')}<rect class="value-pill" x="120" y="160" width="96" height="27" rx="14"/><text class="value-pill-text" x="168" y="179">Iₜ = 0.2 A</text>`;
-  }else $('#circuit').innerHTML=`<path class="wire" d="M90 200 H290 M470 200 H680 V300 H90 V200"/>${battery()}${resistor({id:'EQ',label:'R1–R3',value:60},380,200)}<rect class="value-pill" x="140" y="160" width="96" height="27" rx="14"/><text class="value-pill-text" x="188" y="179">Iₜ = 0.2 A</text>`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 200 H205 M591 200 H680 V300 H90"/>${battery(200,300)}${edges.map((e,i)=>resistor(e,268+i*130,200)).join('')}<rect class="value-pill" x="128" y="154" width="96" height="27" rx="14"/><text class="value-pill-text" x="176" y="173">Iₜ = 0.2 A</text>`;
+  }else $('#circuit').innerHTML=`<path class="wire" d="M90 200 H290 M470 200 H680 V300 H90"/>${battery(200,300)}${resistor({id:'EQ',label:'R1–R3',value:60},380,200)}<rect class="value-pill" x="138" y="154" width="96" height="27" rx="14"/><text class="value-pill-text" x="186" y="173">Iₜ = 0.2 A</text>`;
 }
 
 function bindResistors(){
@@ -45,7 +45,10 @@ function renderSelection(){const labels=[...state.selected].map(id=>state.graph?
 function setMessage(text,type=''){const el=$('#message');el.textContent=text;el.className=`message ${type}`}
 function actions(){
   if(state.level.mode==='relation')return [['series','Series'],['parallel','Parallel']];
-  if(state.level.mode==='formula')return [['series','Rₜ = R₁ + R₂ + …'],['parallel','1/Rₜ = 1/R₁ + 1/R₂ + …']];
+  if(state.level.mode==='formula')return [
+    ['series','<math aria-label="R total equals R one plus R two"><msub><mi>R</mi><mi>T</mi></msub><mo>=</mo><msub><mi>R</mi><mn>1</mn></msub><mo>+</mo><msub><mi>R</mi><mn>2</mn></msub><mo>+</mo><mo>⋯</mo></math>'],
+    ['parallel','<math aria-label="one over R total equals one over R one plus one over R two"><mfrac><mn>1</mn><msub><mi>R</mi><mi>T</mi></msub></mfrac><mo>=</mo><mfrac><mn>1</mn><msub><mi>R</mi><mn>1</mn></msub></mfrac><mo>+</mo><mfrac><mn>1</mn><msub><mi>R</mi><mn>2</mn></msub></mfrac><mo>+</mo><mo>⋯</mo></math>']
+  ];
   return [['same-current','Current is the same in series'],['same-voltage','Voltage is the same in parallel']];
 }
 
@@ -71,11 +74,19 @@ function submit(action){
   const result=reduceGraph(state.graph,[...state.selected]);
   if(!result.ok){reject(result.reason);return}
   setMessage(explain(relation,action),'good');
-  $('#circuit').querySelectorAll('.resistor.selected').forEach(el=>el.classList.add('collapse'));
-  setTimeout(()=>{state.graph=result.graph;state.selected.clear();state.hinted.clear();if(isSolved(state.graph))complete();else{render();setMessage('Good reduction. Find the next group.','good')}},380);
+  animateToCentre(()=>{state.graph=result.graph;state.selected.clear();state.hinted.clear();if(isSolved(state.graph))complete();else{render();setMessage('Good reduction. Find the next group.','good')}});
 }
 
 function reject(text){setMessage(text,'error');$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}
+
+function animateToCentre(done){
+  const selected=[...$('#circuit').querySelectorAll('.resistor.selected')];
+  if(!selected.length){done();return}
+  const boxes=selected.map(el=>el.getBoundingClientRect());
+  const centre={x:boxes.reduce((sum,box)=>sum+box.left+box.width/2,0)/boxes.length,y:boxes.reduce((sum,box)=>sum+box.top+box.height/2,0)/boxes.length};
+  const animations=selected.map((el,index)=>{const box=boxes[index],dx=centre.x-(box.left+box.width/2),dy=centre.y-(box.top+box.height/2);return el.animate([{translate:'0 0',scale:1,opacity:1},{translate:`${dx}px ${dy}px`,scale:.42,opacity:0}],{duration:420,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'})});
+  Promise.all(animations.map(animation=>animation.finished.catch(()=>{}))).then(done);
+}
 function finishTrace(){setMessage('The total current now applies to R1, R2 and R3.','good');state.solved=true;renderTrace(true);complete(true)}
 
 function bestGroup(){

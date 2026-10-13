@@ -1,0 +1,6 @@
+:root{font-family:"Trebuchet MS",Arial,sans-serif}
+nav{align-items:center;gap:7px}.level-select-button{padding:8px 11px;border:1px solid #6ff2dc55;border-radius:9px;color:var(--cyan);background:#6ff2dc0c;cursor:pointer;font-weight:800}.level-select-button:hover{background:#6ff2dc18;border-color:var(--cyan)}
+.wire{stroke-width:3;stroke-linecap:square;stroke-linejoin:miter}.node{stroke-width:3}.battery-line{stroke-width:4;stroke-linecap:square}.battery-text{font-size:12px;text-anchor:end}.resistor .body{stroke-width:2;rx:2}.resistor.hinted .body{stroke-width:3}.action.formula{font-family:"Cambria Math","STIX Two Math",serif;font-size:1.05rem}.action math{font-size:1.08rem}.restart-button{padding:8px 10px;border:1px solid #ffffff22;border-radius:9px}.restart-button span{margin-right:3px}
+.layout,.game-card,.circuit-wrap,#circuit{min-width:0}#circuit{max-width:100%}.actions{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:960px){.layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:540px){.site-header nav .text-button{display:none}.level-select-button{padding:7px 9px;font-size:.78rem}.prompt h1{font-size:1.35rem}.prompt p{padding-inline:10px}.game-card{width:100%;overflow:hidden}}

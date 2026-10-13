@@ -7,12 +7,13 @@
   <title>Current — Circuit Puzzle</title>
   <meta name="description" content="Learn to simplify series and parallel circuits one connection at a time.">
   <link rel="stylesheet" href="game.css">
+  <link rel="stylesheet" href="refinements.css">
 </head>
 <body>
   <div class="ad ad-top" aria-label="Advertisement">Advertisement</div>
   <header class="site-header">
     <a class="brand" href="./" aria-label="Current home"><i aria-hidden="true"></i>CURRENT</a>
-    <nav><button class="text-button" id="levelsButton">Levels</button><button class="text-button" data-open="howDialog">How to play</button></nav>
+    <nav><button class="level-select-button" id="levelsButton"><span aria-hidden="true">▦</span> Level select</button><button class="text-button" data-open="howDialog">How to play</button></nav>
   </header>
   <main class="layout">
     <section class="game-card" id="gameCard">
@@ -21,7 +22,7 @@
       <div class="circuit-wrap"><svg id="circuit" viewBox="0 0 760 390" role="img" aria-label="Interactive electrical circuit"></svg><div class="selection-chip"><span>Selected</span><strong id="selectionText">R1 + R2</strong></div></div>
       <p class="message" id="message" aria-live="polite">Choose the connection.</p>
       <div class="actions" id="actions"></div>
-      <div class="under-actions"><button class="hint-button" id="hintButton">Hint <span>+1 turn</span></button><button class="restart-button" id="restartButton">Restart</button></div>
+      <div class="under-actions"><button class="hint-button" id="hintButton">Hint <span>+1 turn</span></button><button class="restart-button" id="restartButton"><span aria-hidden="true">↻</span> Restart level</button></div>
     </section>
     <aside class="ad ad-side" aria-label="Advertisement">Advertisement</aside>
   </main>
