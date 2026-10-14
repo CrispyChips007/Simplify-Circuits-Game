@@ -60,25 +60,87 @@ export function equivalentValue(type, edges) {
   return 1 / edges.reduce((total, edge) => total + 1 / edge.value, 0);
 }
 
+export function originalResistorNumbers(edge) {
+  if (edge.history?.children) return edge.history.children.flatMap(originalResistorNumbers);
+  const match = String(edge.label || edge.id).match(/\d+/g);
+  return match ? match.map(Number) : [];
+}
+
 export function reduceGraph(graph, ids) {
   const relation = relationship(graph, ids);
   if (!relation) return { ok: false, graph, reason: 'Those resistors do not form one reducible group.' };
   const next = cloneGraph(graph);
   const id = `E${next.nextId++}`;
   const chosen = new Set(ids);
+  const resistorNumbers = relation.edges.flatMap(originalResistorNumbers).sort((a, b) => a - b);
   const edge = {
     id,
-    label: `R${id.slice(1)}`,
+    label: `R${resistorNumbers.join(',')}`,
     a: relation.endpoints[0],
     b: relation.endpoints[1],
     value: equivalentValue(relation.type, relation.edges),
     history: { type: relation.type, children: relation.edges.map((item) => structuredClone(item)) }
   };
+  const insertionIndex = next.edges.findIndex((item) => chosen.has(item.id));
   next.edges = next.edges.filter((item) => !chosen.has(item.id));
-  next.edges.push(edge);
+  next.edges.splice(insertionIndex, 0, edge);
   next.nodes = [...new Set(next.edges.flatMap((item) => [item.a, item.b]))];
   return { ok: true, graph: next, relation, edge };
 }
 
 export function isSolved(graph) { return graph.edges.length === 1; }
 export function nearlyEqual(a, b) { return Math.abs(a - b) <= EPSILON * Math.max(1, Math.abs(a), Math.abs(b)); }
+
+export function expandEdge(graph,edgeId){
+  const edge=graph.edges.find(item=>item.id===edgeId);
+  if(!edge?.history?.children)return {ok:false,graph,reason:'That resistance has no saved components to restore.'};
+  const next=cloneGraph(graph),index=next.edges.findIndex(item=>item.id===edgeId);
+  next.edges.splice(index,1,...edge.history.children.map(item=>structuredClone(item)));
+  next.nodes=[...new Set(next.edges.flatMap(item=>[item.a,item.b]))];
+  return {ok:true,graph:next,edge};
+}
+
+export function treeValues(edge,voltage){
+  const values={};
+  const visit=(item,itemVoltage)=>{
+    const current=itemVoltage/item.value;
+    values[item.id]={voltage:itemVoltage,current};
+    if(!item.history?.children)return;
+    if(item.history.type==='series')item.history.children.forEach(child=>visit(child,current*child.value));
+    else item.history.children.forEach(child=>visit(child,itemVoltage));
+  };
+  visit(edge,voltage);
+  return values;
+}
+
+function solveLinear(matrix,values){
+  const n=values.length;
+  for(let col=0;col<n;col++){
+    let pivot=col;
+    for(let row=col+1;row<n;row++)if(Math.abs(matrix[row][col])>Math.abs(matrix[pivot][col]))pivot=row;
+    [matrix[col],matrix[pivot]]=[matrix[pivot],matrix[col]];[values[col],values[pivot]]=[values[pivot],values[col]];
+    const divisor=matrix[col][col];
+    if(Math.abs(divisor)<EPSILON)throw new Error('Circuit cannot be solved.');
+    for(let item=col;item<n;item++)matrix[col][item]/=divisor;values[col]/=divisor;
+    for(let row=0;row<n;row++)if(row!==col){const factor=matrix[row][col];for(let item=col;item<n;item++)matrix[row][item]-=factor*matrix[col][item];values[row]-=factor*values[col]}
+  }
+  return values;
+}
+
+export function solveCircuit(graph,supplyVoltage){
+  const source=graph.nodes[0],sink=graph.nodes[graph.nodes.length-1];
+  const unknown=graph.nodes.filter(node=>node!==source&&node!==sink),index=new Map(unknown.map((node,i)=>[node,i]));
+  const matrix=unknown.map(()=>unknown.map(()=>0)),values=unknown.map(()=>0);
+  unknown.forEach(node=>graph.edges.filter(edge=>edge.a===node||edge.b===node).forEach(edge=>{
+    const other=edge.a===node?edge.b:edge.a,conductance=1/edge.value,row=index.get(node);
+    matrix[row][row]+=conductance;
+    if(index.has(other))matrix[row][index.get(other)]-=conductance;
+    else if(other===source)values[row]+=conductance*supplyVoltage;
+  }));
+  const solved=unknown.length?solveLinear(matrix,values):[],nodeVoltages={[source]:supplyVoltage,[sink]:0};
+  unknown.forEach((node,i)=>nodeVoltages[node]=solved[i]);
+  const resistors={};
+  graph.edges.forEach(edge=>{const voltage=Math.abs(nodeVoltages[edge.a]-nodeVoltages[edge.b]);resistors[edge.id]={voltage,current:voltage/edge.value}});
+  const totalCurrent=graph.edges.filter(edge=>edge.a===source||edge.b===source).reduce((sum,edge)=>sum+Math.abs(nodeVoltages[edge.a]-nodeVoltages[edge.b])/edge.value,0);
+  return {nodeVoltages,resistors,totalCurrent,totalResistance:supplyVoltage/totalCurrent};
+}

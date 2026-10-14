@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { relationship, reduceGraph, isSolved, nearlyEqual } from '../dist/src/solver.js';
+import { relationship, reduceGraph, isSolved, nearlyEqual, solveCircuit, expandEdge, treeValues } from '../dist/src/solver.js';
 const e=(id,a,b,value)=>({id,a,b,value});
 const parallel={nodes:['A','B'],edges:[e('R1','A','B',12),e('R2','A','B',24),e('R3','A','B',8)],nextId:1};
 test('any parallel pair is valid',()=>{for(const pair of [['R1','R2'],['R1','R3'],['R2','R3']])assert.equal(relationship(parallel,pair).type,'parallel')});
@@ -8,3 +8,8 @@ test('all parallel resistors can reduce in one turn',()=>{const result=reduceGra
 test('pair then remaining resistor reaches same total',()=>{const first=reduceGraph(parallel,['R1','R2']);const second=reduceGraph(first.graph,[first.edge.id,'R3']);assert.equal(second.ok,true);assert.ok(nearlyEqual(second.edge.value,4))});
 test('adjacent subset of a series chain is valid',()=>{const graph={nodes:['A','B','C','D'],edges:[e('R1','A','B',1),e('R2','B','C',2),e('R3','C','D',3)]};assert.equal(relationship(graph,['R1','R2']).type,'series')});
 test('a branch prevents a series reduction',()=>{const graph={nodes:['A','B','C','D'],edges:[e('R1','A','B',1),e('R2','B','C',2),e('RX','B','D',5)]};assert.equal(relationship(graph,['R1','R2']),null)});
+test('equivalent labels retain original resistor names',()=>{const first=reduceGraph(parallel,['R1','R2']);assert.equal(first.edge.label,'R1,2');const second=reduceGraph(first.graph,[first.edge.id,'R3']);assert.equal(second.edge.label,'R1,2,3')});
+test('equivalent keeps the selected group position',()=>{const graph={nodes:['A','B','C','D'],edges:[e('R1','A','B',1),e('R2','B','C',2),e('R3','C','D',3)]};const result=reduceGraph(graph,['R1','R2']);assert.deepEqual(result.graph.edges.map(edge=>edge.label||edge.id),['R1,2','R3'])});
+test('non-adjacent parallel selection uses earliest selected position',()=>{const result=reduceGraph(parallel,['R1','R3']);assert.deepEqual(result.graph.edges.map(edge=>edge.label||edge.id),['R1,3','R2'])});
+test('mixed circuit returns every branch current and voltage',()=>{const graph={nodes:['A','B','C'],edges:[e('R1','A','B',4),e('R2','B','C',12),e('R3','B','C',6)]};const result=solveCircuit(graph,12);assert.ok(nearlyEqual(result.totalResistance,8));assert.ok(nearlyEqual(result.totalCurrent,1.5));assert.ok(nearlyEqual(result.resistors.R1.current,1.5));assert.ok(nearlyEqual(result.resistors.R1.voltage,6));assert.ok(nearlyEqual(result.resistors.R2.current,.5));assert.ok(nearlyEqual(result.resistors.R2.voltage,6));assert.ok(nearlyEqual(result.resistors.R3.current,1));assert.ok(nearlyEqual(result.resistors.R3.voltage,6))});
+test('reduction history expands and carries mixed-circuit values',()=>{let graph={nodes:['A','B','C'],edges:[e('R1','A','B',4),e('R2','B','C',12),e('R3','B','C',6)],nextId:1};const branch=reduceGraph(graph,['R2','R3']);graph=branch.graph;const root=reduceGraph(graph,['R1',branch.edge.id]);const values=treeValues(root.edge,12);assert.ok(nearlyEqual(values.R1.current,1.5));assert.ok(nearlyEqual(values.R2.current,.5));assert.ok(nearlyEqual(values.R3.current,1));const opened=expandEdge(root.graph,root.edge.id);assert.equal(opened.ok,true);assert.equal(opened.graph.edges.length,2)});
