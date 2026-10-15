@@ -27,7 +27,7 @@ const seriesPositions=count=>{
 };
 const seriesLoopPositions=count=>{
   const topCount=Math.ceil((count-1)/2),bottomCount=count-1-topCount;
-  return [...spaced(topCount,285,515).map(x=>({x,y:105})),{x:640,y:190},...spaced(bottomCount,285,515).reverse().map(x=>({x,y:275}))];
+  return [...spaced(topCount,285,515).map(x=>({x,y:80})),{x:640,y:190},...spaced(bottomCount,285,515).reverse().map(x=>({x,y:300}))];
 };
 const usesSeriesLoop=(graph=state.graph)=>state.level.layout==='series'&&graph.edges.length>=3;
 const usesVerticalMixed=()=>state.level.layout==='mixed'&&state.level.mixedOrientation==='vertical';
@@ -57,11 +57,11 @@ function renderOriginal(){
   }else if(state.level.layout==='nested'){
     $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 75 H230 M310 75 H340 M340 75 V25 H555 V75 M340 75 V125 H555 V75 M555 75 H585 M665 75 H700 V145 H145"/>${miniBattery(75,145)}${mini(edges[0],270,75,76,28)}${mini(edges[1],390,25,76,28)}${mini(edges[2],505,25,76,28)}${mini(edges[3],390,125,76,28)}${mini(edges[4],505,125,76,28)}${mini(edges[5],625,75,76,28)}<circle class="node" cx="340" cy="75" r="4"/><circle class="node" cx="555" cy="75" r="4"/>`;
   }else if(state.level.layout==='mixed'){
-    $('#referenceCircuit').innerHTML=usesVerticalMixed()?`<path class="wire" d="M145 28 H365 M365 28 H570 M365 122 H570 M365 122 H145"/>${miniBattery(28,122)}${mini(edges[0],255,28)}${mini(edges[1],470,75,28,66)}${mini(edges[2],570,75,28,66)}<circle class="node" cx="365" cy="28" r="4"/><circle class="node" cx="365" cy="122" r="4"/><circle class="node" cx="470" cy="28" r="4"/><circle class="node" cx="470" cy="122" r="4"/><circle class="node" cx="570" cy="28" r="4"/><circle class="node" cx="570" cy="122" r="4"/>`:`<path class="wire" d="M145 75 H350 M350 75 V25 H575 V75 M350 75 V125 H575 V75 M575 75 H625 V145 H145"/>${miniBattery(75,145)}${mini(edges[0],250,75)}${mini(edges[1],470,25)}${mini(edges[2],470,125)}`;
+    $('#referenceCircuit').innerHTML=usesVerticalMixed()?`<path class="wire" d="M145 18 H365 M365 18 H570 M365 132 H570 M365 132 H145"/>${miniBattery(18,132)}${mini(edges[0],255,18)}${mini(edges[1],470,75,28,66)}${mini(edges[2],570,75,28,66)}<circle class="node" cx="365" cy="18" r="4"/><circle class="node" cx="365" cy="132" r="4"/><circle class="node" cx="470" cy="18" r="4"/><circle class="node" cx="470" cy="132" r="4"/><circle class="node" cx="570" cy="18" r="4"/><circle class="node" cx="570" cy="132" r="4"/>`:`<path class="wire" d="M145 75 H350 M350 75 V25 H575 V75 M350 75 V125 H575 V75 M575 75 H625 V145 H145"/>${miniBattery(75,145)}${mini(edges[0],250,75)}${mini(edges[1],470,25)}${mini(edges[2],470,125)}`;
   }else{
     if(edges.length>=3){
-      const topCount=Math.ceil((edges.length-1)/2),bottomCount=edges.length-1-topCount,positions=[...spaced(topCount,285,500).map(x=>({x,y:28})),{x:625,y:75,vertical:true},...spaced(bottomCount,285,500).reverse().map(x=>({x,y:122}))];
-      $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 28 H625 V122 H145"/>${miniBattery(28,122)}${edges.map((edge,index)=>mini(edge,positions[index].x,positions[index].y,positions[index].vertical?28:edges.length>=5?58:70,positions[index].vertical?66:30)).join('')}`;
+      const topCount=Math.ceil((edges.length-1)/2),bottomCount=edges.length-1-topCount,positions=[...spaced(topCount,285,500).map(x=>({x,y:18})),{x:625,y:75,vertical:true},...spaced(bottomCount,285,500).reverse().map(x=>({x,y:132}))];
+      $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 18 H625 V132 H145"/>${miniBattery(18,132)}${edges.map((edge,index)=>mini(edge,positions[index].x,positions[index].y,positions[index].vertical?28:edges.length>=5?58:70,positions[index].vertical?66:30)).join('')}`;
     }else{
       const xs=spaced(edges.length,260,520);
       $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 62 H625 V128 H145"/>${miniBattery(62,128)}${edges.map((edge,index)=>mini(edge,xs[index],62,80)).join('')}`;
@@ -95,7 +95,7 @@ function circuitPosition(graph,edgeId){
   if(nestedExpanded(graph))return nestedPosition(graph,edges[index]);
   const allParallel=state.level.layout==='parallel'&&edges.every(edge=>[edge.a,edge.b].sort().join('|')===[edges[0].a,edges[0].b].sort().join('|'));
   if(allParallel){const xs=edges.length===1?[380]:edges.length===2?[320,440]:edges.length===3?[250,380,510]:edges.map((_,i)=>260+i*100);return{x:xs[index],y:200}}
-  if(edges.length===3&&state.level.layout==='mixed')return usesVerticalMixed()?[{x:250,y:105},{x:500,y:190},{x:620,y:190}][index]:[{x:253,y:200},{x:490,y:115},{x:490,y:285}][index];
+  if(edges.length===3&&state.level.layout==='mixed')return usesVerticalMixed()?[{x:250,y:80},{x:500,y:190},{x:620,y:190}][index]:[{x:253,y:200},{x:490,y:115},{x:490,y:285}][index];
   if(usesSeriesLoop(graph))return seriesLoopPositions(edges.length)[index];
   return seriesPositions(edges.length)[index];
 }
@@ -113,8 +113,8 @@ function renderKnownValues(){
   if(state.current!==null)$('#circuit').insertAdjacentHTML('beforeend',currentPill(!state.solved));
   const labels=state.graph.edges.flatMap(edge=>{
     const known=state.known[edge.id]||{},value=state.values[edge.id],position=circuitPosition(state.graph,edge.id),number=(edge.label||edge.id).replace(/^R/,'').replace(/,/g,'‚'),selectable=!state.solved,vertical=state.level.layout==='parallel'||(usesVerticalMixed()&&state.graph.edges.length===3&&state.graph.edges.indexOf(edge)>0),items=[];
-    if(known.current&&value&&state.graph.edges.length!==1){const id=`CURRENT:${edge.id}`,y=vertical?position.y-135:position.y-55;items.push(`<g class="resistor-current${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="current-hitbox" x="${position.x-50}" y="${y}" width="100" height="25" rx="12"/><text class="value-pill-text circuit-value" x="${position.x}" y="${y+18}">I${subscriptNumber(number)} = ${fmt(value.current)} A</text></g>`)}
-    if(known.voltage&&value){const id=`VOLTAGE:${edge.id}`,y=vertical?position.y+110:position.y+30;items.push(`<g class="known-voltage${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="voltage-hitbox" x="${position.x-50}" y="${y}" width="100" height="25" rx="12"/><text class="value-pill-text voltage-value" x="${position.x}" y="${y+18}">V${subscriptNumber(number)} = ${fmt(value.voltage)} V</text></g>`)}
+    if(known.current&&value&&state.graph.edges.length!==1){const id=`CURRENT:${edge.id}`,y=vertical?position.y-145:position.y-55;items.push(`<g class="resistor-current${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="current-hitbox" x="${position.x-50}" y="${y}" width="100" height="25" rx="12"/><text class="value-pill-text circuit-value" x="${position.x}" y="${y+18}">I${subscriptNumber(number)} = ${fmt(value.current)} A</text></g>`)}
+    if(known.voltage&&value){const id=`VOLTAGE:${edge.id}`,y=vertical?position.y+125:position.y+30;items.push(`<g class="known-voltage${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="voltage-hitbox" x="${position.x-50}" y="${y}" width="100" height="25" rx="12"/><text class="value-pill-text voltage-value" x="${position.x}" y="${y+18}">V${subscriptNumber(number)} = ${fmt(value.voltage)} V</text></g>`)}
     return items;
   }).join('');
   $('#circuit').insertAdjacentHTML('beforeend',labels);
@@ -133,18 +133,18 @@ function renderCircuit(){
   }else if(allParallel){
     const xs=edges.map(edge=>circuitPosition(state.graph,edge.id).x);
     const railEnd=Math.max(...xs);
-    $('#circuit').innerHTML=`<path class="wire parallel-rails" d="M90 100 H${railEnd} M90 300 H${railEnd}"/>${battery(100,300)}${edges.map((e,i)=>`<g class="moving-wires" data-edge-id="${e.id}"><path class="wire" d="M${xs[i]} 100 V300"/><circle class="node" cx="${xs[i]}" cy="100" r="6"/><circle class="node" cx="${xs[i]}" cy="300" r="6"/></g>${resistor(e,xs[i],200,true)}`).join('')}`;
+    $('#circuit').innerHTML=`<path class="wire parallel-rails" d="M90 80 H${railEnd} M90 320 H${railEnd}"/>${battery(80,320)}${edges.map((e,i)=>`<g class="moving-wires" data-edge-id="${e.id}"><path class="wire" d="M${xs[i]} 80 V320"/><circle class="node" cx="${xs[i]}" cy="80" r="6"/><circle class="node" cx="${xs[i]}" cy="320" r="6"/></g>${resistor(e,xs[i],200,true)}`).join('')}`;
   }else if(nestedExpanded(state.graph)){
     $('#circuit').innerHTML=`<path class="wire" d="M90 165 H245 M555 165 H700 V315 H90 M245 165 V75 H555 V165 M245 165 V255 H555 V165"/>${battery(165,315)}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id);return resistor(edge,position.x,position.y)}).join('')}<circle class="node" cx="245" cy="165" r="6"/><circle class="node" cx="555" cy="165" r="6"/>`;
   }else if(edges.length===3&&usesVerticalMixed()){
     const [r1,r2,r3]=edges;
-    $('#circuit').innerHTML=`<path class="wire" d="M90 105 H410 M410 105 H620 M410 275 H620 M410 275 H90"/>${battery(105,275)}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M500 105 V275"/><circle class="node" cx="500" cy="105" r="6"/><circle class="node" cx="500" cy="275" r="6"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M620 105 V275"/><circle class="node" cx="620" cy="105" r="6"/><circle class="node" cx="620" cy="275" r="6"/></g>${resistor(r1,250,105)}${resistor(r2,500,190,true)}${resistor(r3,620,190,true)}<circle class="node" cx="410" cy="105" r="6"/><circle class="node" cx="410" cy="275" r="6"/>`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H410 M410 80 H620 M410 300 H620 M410 300 H90"/>${battery(80,300)}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M500 80 V300"/><circle class="node" cx="500" cy="80" r="6"/><circle class="node" cx="500" cy="300" r="6"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M620 80 V300"/><circle class="node" cx="620" cy="80" r="6"/><circle class="node" cx="620" cy="300" r="6"/></g>${resistor(r1,250,80)}${resistor(r2,500,190,true)}${resistor(r3,620,190,true)}<circle class="node" cx="410" cy="80" r="6"/><circle class="node" cx="410" cy="300" r="6"/>`;
   }else if(edges.length===3&&state.level.layout==='mixed'){
     const [r1,r2,r3]=edges;
     $('#circuit').innerHTML=`<path class="wire" d="M90 200 H370 M610 200 H680 V350 H90"/>${battery(200,350)}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M370 200 V115 H610 V200"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M370 200 V285 H610 V200"/></g>${resistor(r1,253,200)}${resistor(r2,490,115)}${resistor(r3,490,285)}<circle class="node" cx="370" cy="200" r="6"/><circle class="node" cx="610" cy="200" r="6"/>`;
   }else if(usesSeriesLoop()){
     const positions=edges.map(edge=>circuitPosition(state.graph,edge.id)),verticalIndex=Math.ceil((edges.length-1)/2);
-    $('#circuit').innerHTML=`<path class="wire" d="M90 105 H640 V275 H90"/>${battery(105,275)}${edges.map((edge,index)=>resistor(edge,positions[index].x,positions[index].y,index===verticalIndex)).join('')}`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H640 V300 H90"/>${battery(80,300)}${edges.map((edge,index)=>resistor(edge,positions[index].x,positions[index].y,index===verticalIndex)).join('')}`;
   }else{
     const positions=edges.map(edge=>circuitPosition(state.graph,edge.id));
     const wrapped=state.level.layout==='series'&&edges.length>3;
@@ -295,7 +295,7 @@ function animateToEquivalent(nextGraph,equivalentId,done){
   const oldRailEnd=state.level.layout==='parallel'?Math.max(...state.graph.edges.map(edge=>circuitPosition(state.graph,edge.id).x)):0;
   const newRailEnd=state.level.layout==='parallel'?Math.max(...nextGraph.edges.map(edge=>circuitPosition(nextGraph,edge.id).x)):0;
   const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:700,start=performance.now();
-  const frame=now=>{const raw=duration?Math.min(1,(now-start)/duration):1,t=1-Math.pow(1-raw,3);items.forEach(item=>{const x=item.x+(item.destination.x-item.cx)*t,y=item.y+(item.destination.y-item.cy)*t;item.el.setAttribute('transform',`translate(${x} ${y})`)});branches.forEach(branch=>branch.el.setAttribute('transform',`translate(${branch.dx*t} ${branch.dy*t})`));if(rails){const railEnd=oldRailEnd+(newRailEnd-oldRailEnd)*t;rails.setAttribute('d',`M90 100 H${railEnd} M90 300 H${railEnd}`)}if(raw<1)requestAnimationFrame(frame);else done()};
+  const frame=now=>{const raw=duration?Math.min(1,(now-start)/duration):1,t=1-Math.pow(1-raw,3);items.forEach(item=>{const x=item.x+(item.destination.x-item.cx)*t,y=item.y+(item.destination.y-item.cy)*t;item.el.setAttribute('transform',`translate(${x} ${y})`)});branches.forEach(branch=>branch.el.setAttribute('transform',`translate(${branch.dx*t} ${branch.dy*t})`));if(rails){const railEnd=oldRailEnd+(newRailEnd-oldRailEnd)*t;rails.setAttribute('d',`M90 80 H${railEnd} M90 320 H${railEnd}`)}if(raw<1)requestAnimationFrame(frame);else done()};
   requestAnimationFrame(frame);
 }
 function bestGroup(){
