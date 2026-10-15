@@ -2,6 +2,7 @@ import { LEVELS } from './levels.js?v=20261015-42';
 import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261015-44';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
+import { calculationComplete } from './completion.js?v=20261015-53';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
@@ -332,8 +333,7 @@ function bestGroup(){
   return groups.sort((a,b)=>b.set.length-a.set.length)[0];
 }
 function finishCalculationIfReady(){
-  const original=state.graph.edges.every(edge=>!edge.history),currentDone=original&&state.graph.edges.every(edge=>state.known[edge.id]?.current),voltageDone=original&&state.graph.edges.every(edge=>state.known[edge.id]?.voltage);
-  if(currentDone&&(state.level.mode==='complete'||voltageDone)){state.solved=true;state.phase='restored';render();complete();return true}
+  if(calculationComplete(state.level,state.known)){state.graph=cloneGraph(state.level.graph);state.solved=true;state.phase='restored';render();complete();return true}
   return false
 }
 function hint(){
