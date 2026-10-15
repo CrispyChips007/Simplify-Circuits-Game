@@ -8,6 +8,7 @@ test('final level combines two 12 volt supplies into 24 volts',()=>{
   const level=LEVELS.at(-1);
   assert.deepEqual(level.supplies.map(supply=>supply.voltage),[12,12]);
   assert.equal(levelSupply(level).voltage,24);
+  assert.equal(levelSupply(level).capacity,4);
 });
 
 test('final level completes from all original resistor values despite extra group state',()=>{
