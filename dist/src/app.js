@@ -1,4 +1,4 @@
-import { LEVELS } from './levels.js?v=20261015-57';
+import { LEVELS } from './levels.js?v=20261015-58';
 import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261015-44';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
@@ -224,7 +224,7 @@ function render(){
 
 function applyResponsiveViewBoxes(){
   const mobile=matchMedia('(max-width:540px)').matches;
-  $('#circuit').setAttribute('viewBox',mobile&&state.level.layout!=='custom'?'30 0 700 390':'0 0 760 390');
+  $('#circuit').setAttribute('viewBox',mobile&&state.level.layout!=='custom'?'30 24 700 390':mobile?'0 24 760 390':'0 0 760 390');
   $('#referenceCircuit').setAttribute('viewBox',mobile?'105 0 620 150':'0 0 760 150');
 }
 

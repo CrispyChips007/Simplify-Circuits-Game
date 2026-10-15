@@ -4,6 +4,11 @@ const nested = (values) => graph(['A','B','T','U','D','E'],[
   edge('R1','A','B',values[0]),edge('R2','B','T',values[1]),edge('R3','T','D',values[2]),
   edge('R4','B','U',values[3]),edge('R5','U','D',values[4]),edge('R6','D','E',values[5])
 ]);
+const parallelSeriesParallel=(values)=>graph(['A','B','C','D'],[
+  edge('R1','A','B',values[0]),edge('R2','A','B',values[1]),edge('R3','B','C',values[2]),
+  edge('R4','C','D',values[3]),edge('R5','C','D',values[4])
+]);
+const parallelSeriesParallelPositions={A:[135,165],B:[285,165],C:[475,165],D:[625,165],R1:[210,80],R2:[210,250],R3:[380,165],R4:[550,80],R5:[550,250]};
 const custom=(id,name,mode,topology,nodes,edges,positions,best)=>({id,name,mode,title:'Simplify the circuit',prompt:'Select a valid section.',best,graph:graph(nodes,edges),layout:'custom',topology,positions});
 
 const LEVELS_SOURCE = [
@@ -41,11 +46,17 @@ const LEVELS_SOURCE = [
   {id:32,name:'Circuit',mode:'complete',title:'Solve currents',prompt:'Determine every current.',best:11,voltage:24,graph:nested([2,4,8,6,6,10]),layout:'nested'},
   {id:33,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:10,supplies:[{voltage:12,capacity:3},{voltage:12,capacity:5}],supplyConnection:'parallel',graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed'},
   {id:34,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:14,supplies:[{voltage:12,capacity:4},{voltage:12,capacity:4}],supplyConnection:'series',graph:nested([2,4,8,6,6,10]),layout:'nested'}
+  ,{...custom(35,'Circuit','formula','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,parallelSeriesParallelPositions,3)}
+  ,{...custom(36,'Circuit','complete','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,parallelSeriesParallelPositions,10),voltage:24}
+  ,{...custom(37,'Circuit','voltage','unequal-branches',['A','B','T','C','D'],[edge('R1','A','B',3),edge('R2','B','C',10),edge('R3','B','T',4),edge('R4','T','C',6),edge('R5','C','D',7)],{A:[135,165],B:[265,165],T:[420,80],C:[555,165],D:[680,165],R1:[200,165],R2:[410,235],R3:[340,80],R4:[490,80],R5:[620,165]},14),voltage:24}
+  ,{...custom(38,'Circuit','voltage','three-way-tail',['A','B','T','U','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','T',3),edge('R4','T','C',9),edge('R5','B','U',5),edge('R6','U','C',10),edge('R7','C','D',6)],{A:[120,165],B:[240,165],T:[400,65],U:[400,265],C:[560,165],D:[690,165],R1:[180,165],R2:[400,165],R3:[320,65],R4:[480,65],R5:[320,265],R6:[480,265],R7:[625,165]},18),voltage:24}
+  ,{...custom(39,'Circuit','voltage','offset-double',['A','B','T','C','U','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','U',5),edge('R6','U','D',5)],{A:[110,165],B:[230,165],T:[365,80],C:[500,165],U:[620,165],D:[750,165],R1:[170,165],R2:[295,80],R3:[435,80],R4:[365,250],R5:[560,165],R6:[685,165]},16),voltage:30}
+  ,{...custom(40,'Circuit','voltage','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,parallelSeriesParallelPositions,14),voltage:24}
 ];
 
 // Teaching order: identify connections, apply formulas, solve currents, then solve all values.
 // The second near-identical series-identification question is deliberately omitted.
-const COURSE_ORDER=[1,3,4,25,13,26,5,6,7,27,17,18,20,28,19,29,30,8,9,31,32,11,33,34];
+const COURSE_ORDER=[1,3,4,25,13,26,5,6,7,27,17,35,18,20,28,19,29,30,8,9,31,32,36,11,33,37,38,39,40,34];
 export const LEVELS=COURSE_ORDER.map((sourceId,index)=>{
   const source=LEVELS_SOURCE.find(level=>level.id===sourceId);
   const mode=source.mode;

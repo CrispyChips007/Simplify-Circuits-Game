@@ -6,8 +6,8 @@ import { isSolved, nearlyEqual, reduceGraph, solveCircuit, treeValues } from '..
 import { combineSupplies, levelSupply } from '../dist/src/supplies.js';
 
 test('course contains sequential levels',()=>{
-  assert.equal(LEVELS.length,24);
-  assert.deepEqual(LEVELS.map(level=>level.id),Array.from({length:24},(_,index)=>index+1));
+  assert.equal(LEVELS.length,30);
+  assert.deepEqual(LEVELS.map(level=>level.id),Array.from({length:30},(_,index)=>index+1));
 });
 
 test('all-value levels follow current-only levels',()=>{
@@ -51,8 +51,8 @@ test('adjacent simplification levels do not repeat the same advanced topology',(
   }
 });
 
-test('course contains six genuinely new circuit topologies',()=>{
-  assert.equal(new Set(LEVELS.map(level=>level.topology).filter(Boolean)).size,6);
+test('course contains seven genuinely different custom circuit topologies',()=>{
+  assert.equal(new Set(LEVELS.map(level=>level.topology).filter(Boolean)).size,7);
   assert.ok(!LEVELS.some(level=>level.layout==='parallel'&&level.graph.edges.length>5));
 });
 
@@ -115,8 +115,8 @@ test('mixed circuits vary between horizontal and vertical presentations',()=>{
   assert.ok(mixed.some(level=>level.mixedOrientation!=='vertical'));
 });
 
-test('level 17 keeps its series tail on the main circuit line',()=>{
-  const level=LEVELS[16];
+test('offset-double layout keeps its series tail on the main circuit line',()=>{
+  const level=LEVELS.find(item=>item.topology==='offset-double');
   assert.equal(level.topology,'offset-double');
   assert.equal(level.positions.R5[1],level.positions.C[1]);
   assert.equal(level.positions.R6[1],level.positions.D[1]);
@@ -139,9 +139,9 @@ function reductionToSingle(start){
   return null;
 }
 
-test('calculation levels 18 through 24 restore every required value',()=>{
-  const calculationLevels=LEVELS.slice(17);
-  assert.equal(calculationLevels.length,7);
+test('every calculation level restores every required value',()=>{
+  const calculationLevels=LEVELS.filter(level=>['complete','voltage'].includes(level.mode));
+  assert.equal(calculationLevels.length,12);
   for(const level of calculationLevels){
     assert.ok(['complete','voltage'].includes(level.mode),`level ${level.id} is a calculation level`);
     const supply=levelSupply(level);
