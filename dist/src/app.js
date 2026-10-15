@@ -1,4 +1,4 @@
-import { LEVELS } from './levels.js?v=20261015-59';
+import { LEVELS } from './levels.js?v=20261015-60';
 import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261015-44';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
