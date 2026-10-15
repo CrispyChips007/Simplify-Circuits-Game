@@ -108,3 +108,9 @@ test('course includes playable series and parallel supply combinations',()=>{
   assert.ok(LEVELS.some(level=>level.supplyConnection==='series'&&level.supplies?.length>1));
   assert.ok(LEVELS.some(level=>level.supplyConnection==='parallel'&&level.supplies?.length>1));
 });
+
+test('mixed circuits vary between horizontal and vertical presentations',()=>{
+  const mixed=LEVELS.filter(level=>level.layout==='mixed');
+  assert.ok(mixed.some(level=>level.mixedOrientation==='vertical'));
+  assert.ok(mixed.some(level=>level.mixedOrientation!=='vertical'));
+});
