@@ -115,6 +115,13 @@ test('mixed circuits vary between horizontal and vertical presentations',()=>{
   assert.ok(mixed.some(level=>level.mixedOrientation!=='vertical'));
 });
 
+test('level 17 keeps its series tail on the main circuit line',()=>{
+  const level=LEVELS[16];
+  assert.equal(level.topology,'offset-double');
+  assert.equal(level.positions.R5[1],level.positions.C[1]);
+  assert.equal(level.positions.R6[1],level.positions.D[1]);
+});
+
 function reductionToSingle(start){
   const queue=[structuredClone(start)],seen=new Set();
   while(queue.length){

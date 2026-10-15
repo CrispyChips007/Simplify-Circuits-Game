@@ -1,4 +1,4 @@
-import { LEVELS } from './levels.js?v=20261015-55';
+import { LEVELS } from './levels.js?v=20261015-57';
 import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261015-44';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
@@ -103,10 +103,12 @@ function circuitPosition(graph,edgeId){
     if(saved)return{x:saved[0],y:saved[1]};
     if(edge.history?.children){
       const a=state.level.positions[edge.a],b=state.level.positions[edge.b];
+      const leaves=[];const collect=item=>item.history?.children?item.history.children.forEach(collect):leaves.push(state.level.positions[item.id]);edge.history.children.forEach(collect);
+      const valid=leaves.filter(Boolean),key=item=>[item.a,item.b].sort().join('|'),hasParallelSibling=graph.edges.some(item=>item.id!==edge.id&&key(item)===key(edge));
+      if(hasParallelSibling&&valid.length)return{x:valid.reduce((sum,p)=>sum+p[0],0)/valid.length,y:valid.reduce((sum,p)=>sum+p[1],0)/valid.length};
       if(a&&b&&a[1]===b[1])return{x:(a[0]+b[0])/2,y:a[1]};
       if(a&&b&&a[0]===b[0])return{x:a[0],y:(a[1]+b[1])/2};
-      const leaves=[];const collect=item=>item.history?.children?item.history.children.forEach(collect):leaves.push(state.level.positions[item.id]);edge.history.children.forEach(collect);
-      const valid=leaves.filter(Boolean);if(valid.length)return{x:valid.reduce((sum,p)=>sum+p[0],0)/valid.length,y:valid.reduce((sum,p)=>sum+p[1],0)/valid.length};
+      if(valid.length)return{x:valid.reduce((sum,p)=>sum+p[0],0)/valid.length,y:valid.reduce((sum,p)=>sum+p[1],0)/valid.length};
     }
     const a=state.level.positions[edge.a],b=state.level.positions[edge.b];
     return{x:(a[0]+b[0])/2,y:(a[1]+b[1])/2};
