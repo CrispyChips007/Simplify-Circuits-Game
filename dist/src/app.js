@@ -1,4 +1,4 @@
-import { LEVELS } from './levels.js?v=20261015-60';
+import { LEVELS } from './levels.js?v=20261015-61';
 import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261015-44';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
@@ -56,7 +56,8 @@ const resistorIsVertical=(edge,graph=state.graph)=>{
   return false;
 };
 const resistor=(edge,x,y,vertical=false)=>{const enlarged=mobileCircuit(),showValue=state.level.mode!=='relation',w=vertical?(enlarged?68:54):(enlarged?128:110),h=vertical?(enlarged?130:104):(enlarged?52:44),labelY=h/2+(showValue?-4:6);return `<g class="resistor${vertical?' vertical':''}${state.selected.has(edge.id)?' selected':''}${state.hinted.has(edge.id)?' hinted':''}" data-id="${edge.id}" tabindex="0" role="button" transform="translate(${x-w/2} ${y-h/2})"><rect class="body" width="${w}" height="${h}" rx="2"/><text class="rid" x="${w/2}" y="${labelY}">${svgResistorLabel(edge.label||edge.id)}</text>${showValue?`<text class="ohms" x="${w/2}" y="${h/2+14}">${fmt(edge.value)} Ω</text>`:''}</g>`};
-const battery=(top,bottom)=>{const mid=(top+bottom)/2,selectable=!state.solved,voltage=supplyVoltage(),capacity=supplyCapacity();if(state.phase==='supply'){const sources=state.level.supplies,series=state.level.supplyConnection==='series',gap=56,first=mid-gap*(sources.length-1)/2;const symbols=sources.map((item,index)=>{const id=`SUPPLY:${index}`,x=series?90:65+index*50,y=series?first+index*gap:mid;return `<g class="supply-component selectable${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="supply-hitbox" x="${x-32}" y="${y-23}" width="64" height="46" rx="8"/><path class="battery-line" d="M${x-20} ${y-6} H${x+20} M${x-13} ${y+6} H${x+13}"/><text class="battery-text supply-voltage" x="${x-29}" y="${y-11}">${item.voltage} V</text><text class="battery-text supply-capacity" x="${x-29}" y="${y+21}">${item.capacity} Ah</text></g>`}).join('');const wires=series?`M90 ${top} V${first-6} ${sources.slice(1).map((_,index)=>`M90 ${first+index*gap+6} V${first+(index+1)*gap-6}`).join(' ')} M90 ${first+(sources.length-1)*gap+6} V${bottom}`:`M65 ${top} H${65+(sources.length-1)*50} M65 ${bottom} H${65+(sources.length-1)*50} ${sources.map((_,index)=>`M${65+index*50} ${top} V${mid-6} M${65+index*50} ${mid+6} V${bottom}`).join(' ')}`;return symbols+`<path class="wire" d="${wires}"/>`};return `<g class="supply-component${selectable?' selectable':''}${state.selected.has('SUPPLY')?' selected':''}"${selectable?` data-id="SUPPLY" tabindex="0" role="button" aria-label="${voltage} volt, ${capacity} amp hour supply"`:''}><rect class="supply-hitbox" x="34" y="${mid-52}" width="104" height="104" rx="8"/><path class="wire" d="M90 ${top} V${mid-13} M90 ${mid+13} V${bottom}"/><path class="battery-line" d="M68 ${mid-7} H112 M77 ${mid+7} H103"/><text class="battery-text supply-voltage" x="61" y="${mid}">${voltage} V</text><text class="battery-text supply-capacity" x="61" y="${mid+16}">${supplyCapacityLabel()}</text></g>`};
+const movingLead=(edge,position,vertical=false)=>{const reach=vertical?85:84,path=vertical?`M${position.x} ${position.y-reach} V${position.y+reach}`:`M${position.x-reach} ${position.y} H${position.x+reach}`;return `<g class="moving-wires" data-edge-id="${edge.id}"><path class="wire motion-lead" d="${path}"/></g>`};
+const battery=(top,bottom)=>{const mid=(top+bottom)/2,selectable=!state.solved,voltage=supplyVoltage(),capacity=supplyCapacity();if(state.phase==='supply'){const sources=state.level.supplies,series=state.level.supplyConnection==='series',gap=Math.min(56,(bottom-top-30)/Math.max(1,sources.length-1)),first=mid-gap*(sources.length-1)/2,xs=spaced(sources.length,76,164);const symbols=sources.map((item,index)=>{const id=`SUPPLY:${index}`,x=series?90:xs[index],y=series?first+index*gap:mid;return `<g class="supply-component selectable${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="supply-hitbox" x="${x-25}" y="${y-25}" width="50" height="50" rx="8"/><path class="battery-line" d="M${x-18} ${y-6} H${x+18} M${x-12} ${y+6} H${x+12}"/><text class="battery-text supply-voltage" style="text-anchor:middle" x="${x}" y="${y-12}">${item.voltage} V</text><text class="battery-text supply-capacity" style="text-anchor:middle" x="${x}" y="${y+22}">${item.capacity} Ah</text></g>`}).join('');const wires=series?`M90 ${top} V${first-6} ${sources.slice(1).map((_,index)=>`M90 ${first+index*gap+6} V${first+(index+1)*gap-6}`).join(' ')} M90 ${first+(sources.length-1)*gap+6} V${bottom}`:`M${xs[0]} ${top} H${xs.at(-1)} M${xs[0]} ${bottom} H${xs.at(-1)} ${xs.map(x=>`M${x} ${top} V${mid-6} M${x} ${mid+6} V${bottom}`).join(' ')}`;return symbols+`<path class="wire" d="${wires}"/>`};return `<g class="supply-component${selectable?' selectable':''}${state.selected.has('SUPPLY')?' selected':''}"${selectable?` data-id="SUPPLY" tabindex="0" role="button" aria-label="${voltage} volt, ${capacity} amp hour supply"`:''}><rect class="supply-hitbox" x="34" y="${mid-52}" width="104" height="104" rx="8"/><path class="wire" d="M90 ${top} V${mid-13} M90 ${mid+13} V${bottom}"/><path class="battery-line" d="M68 ${mid-7} H112 M77 ${mid+7} H103"/><text class="battery-text supply-voltage" x="61" y="${mid}">${voltage} V</text><text class="battery-text supply-capacity" x="61" y="${mid+16}">${supplyCapacityLabel()}</text></g>`};
 
 function renderOriginal(){
   const edges=state.level.graph?.edges||[];
@@ -74,10 +75,11 @@ function renderOriginal(){
     return `<path class="wire" d="M125 ${top} H165 M125 ${bottom} H165"/>${symbols}`;
   };
   if(state.level.layout==='custom'){
-    const points=state.level.positions,scale=.52,map=([x,y])=>[405+(x-400)*scale,75+(y-165)*scale];
+    const points=state.level.positions,scale=.48,map=([x,y])=>[405+(x-400)*scale,75+(y-165)*scale];
     const paths=edges.map(edge=>{const a=map(points[edge.a]),b=map(points[edge.b]),p=map(points[edge.id]);return `<path class="wire" d="M${a[0]} ${a[1]} V${p[1]} H${b[0]} V${b[1]}"/>`}).join('');
     const source=map(points[state.level.graph.nodes[0]]),sink=map(points[state.level.graph.nodes[state.level.graph.nodes.length-1]]);
-    $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 ${source[1]} H${source[0]} M${sink[0]} ${sink[1]} H700 V140 H145"/>${miniBattery(source[1],140)}${paths}${edges.map(edge=>{const p=map(points[edge.id]);return mini(edge,p[0],p[1])}).join('')}`;
+    const outerX=Math.min(650,sink[0]+35);
+    $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 ${source[1]} H${source[0]} M${sink[0]} ${sink[1]} H${outerX} V140 H145"/>${miniBattery(source[1],140)}${paths}${edges.map(edge=>{const p=map(points[edge.id]);return mini(edge,p[0],p[1])}).join('')}`;
   }else if(state.level.layout==='parallel'){
     const xs=spaced(edges.length,230,530);
     const railEnd=xs[edges.length-1];
@@ -95,8 +97,6 @@ function renderOriginal(){
       $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 25 H625 V125 H145"/>${miniBattery(25,125)}${edges.map((edge,index)=>mini(edge,xs[index],25)).join('')}`;
     }
   }
-  const reference=$('#referenceCircuit');
-  reference.innerHTML=`<g class="reference-proportions" transform="translate(48 0) scale(.88 1)">${reference.innerHTML}</g>`;
 }
 
 function nestedExpanded(graph){const direct=graph.edges.filter(edge=>new Set([edge.a,edge.b]).has('B')&&new Set([edge.a,edge.b]).has('D')).length;return state.level.layout==='nested'&&(graph.nodes.includes('T')||graph.nodes.includes('U')||direct>1)}
@@ -148,9 +148,9 @@ function renderKnownValues(){
   if(!['total','expand','restored'].includes(state.phase))return;
   if(state.current!==null)$('#circuit').insertAdjacentHTML('beforeend',currentPill(!state.solved));
   const labels=state.graph.edges.flatMap(edge=>{
-    const known=state.known[edge.id]||{},value=state.values[edge.id],position=circuitPosition(state.graph,edge.id),number=(edge.label||edge.id).replace(/^R/,'').replace(/,/g,'‚'),selectable=!state.solved,vertical=resistorIsVertical(edge),items=[];
-    if(known.current&&value&&state.graph.edges.length!==1){const id=`CURRENT:${edge.id}`,y=vertical?position.y-145:position.y-55;items.push(`<g class="resistor-current${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="current-hitbox" x="${position.x-50}" y="${y}" width="100" height="25" rx="12"/><text class="value-pill-text circuit-value" x="${position.x}" y="${y+18}">I${subscriptNumber(number)} = ${fmt(value.current)} A</text></g>`)}
-    if(known.voltage&&value){const id=`VOLTAGE:${edge.id}`;items.push(vertical?`<g class="known-voltage vertical-value${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button" transform="translate(${position.x+46} ${position.y}) rotate(-90)"><rect class="voltage-hitbox" x="-50" y="-12.5" width="100" height="25" rx="12"/><text class="value-pill-text voltage-value" x="0" y="6">V${subscriptNumber(number)} = ${fmt(value.voltage)} V</text></g>`:`<g class="known-voltage${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="voltage-hitbox" x="${position.x-50}" y="${position.y+30}" width="100" height="25" rx="12"/><text class="value-pill-text voltage-value" x="${position.x}" y="${position.y+48}">V${subscriptNumber(number)} = ${fmt(value.voltage)} V</text></g>`)}
+    const known=state.known[edge.id]||{},value=state.values[edge.id],position=circuitPosition(state.graph,edge.id),rawNumber=(edge.label||edge.id).replace(/^R/,''),grouped=/[,–]/.test(rawNumber),number=rawNumber.replace(/,/g,'‚'),selectable=!state.solved,vertical=resistorIsVertical(edge),items=[],currentName=grouped?'I':`I${subscriptNumber(number)}`,voltageName=grouped?'V':`V${subscriptNumber(number)}`;
+    if(known.current&&value&&state.graph.edges.length!==1){const id=`CURRENT:${edge.id}`,y=vertical?position.y-145:position.y-55;items.push(`<g class="resistor-current${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="current-hitbox" x="${position.x-48}" y="${y}" width="96" height="23" rx="11"/><text class="value-pill-text circuit-value" x="${position.x}" y="${y+16}">${currentName} = ${fmt(value.current)} A</text></g>`)}
+    if(known.voltage&&value){const id=`VOLTAGE:${edge.id}`;items.push(vertical?`<g class="known-voltage vertical-value${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button" transform="translate(${position.x+43} ${position.y}) rotate(-90)"><rect class="voltage-hitbox" x="-48" y="-11.5" width="96" height="23" rx="11"/><text class="value-pill-text voltage-value" x="0" y="5">${voltageName} = ${fmt(value.voltage)} V</text></g>`:`<g class="known-voltage${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="voltage-hitbox" x="${position.x-48}" y="${position.y+31}" width="96" height="23" rx="11"/><text class="value-pill-text voltage-value" x="${position.x}" y="${position.y+47}">${voltageName} = ${fmt(value.voltage)} V</text></g>`)}
     return items;
   }).join('');
   $('#circuit').insertAdjacentHTML('beforeend',labels);
@@ -162,7 +162,7 @@ function renderCircuit(){
   const allParallel=state.level.layout==='parallel'&&edges.every(e=>[e.a,e.b].sort().join('|')===[edges[0].a,edges[0].b].sort().join('|'));
   if(state.level.layout==='custom'){
     const positions=state.level.positions,nodePoint=node=>positions[node];
-    const paths=edges.map(edge=>`<path class="wire" d="${customWirePath(edge)}"/>`).join('');
+    const paths=edges.map(edge=>`<g class="moving-wires" data-edge-id="${edge.id}"><path class="wire" d="${customWirePath(edge)}"/></g>`).join('');
     const first=nodePoint(state.level.graph.nodes[0]),last=nodePoint(state.level.graph.nodes[state.level.graph.nodes.length-1]);
     const outerX=Math.max(700,last[0]);
     $('#circuit').innerHTML=`<path class="wire" d="M90 ${first[1]} H${first[0]} M${last[0]} ${last[1]} H${outerX} V315 H90"/>${battery(first[1],315)}${paths}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id);return resistor(edge,position.x,position.y,resistorIsVertical(edge))}).join('')}${state.graph.nodes.map(node=>{const p=nodePoint(node);return `<circle class="node" cx="${p[0]}" cy="${p[1]}" r="5"/>`}).join('')}`;
@@ -172,23 +172,23 @@ function renderCircuit(){
     $('#circuit').innerHTML=`<path class="wire parallel-rails" d="M90 80 H${railEnd} M90 320 H${railEnd}"/>${battery(80,320)}${edges.map((e,i)=>`<g class="moving-wires" data-edge-id="${e.id}"><path class="wire" d="M${xs[i]} 80 V320"/><circle class="node" cx="${xs[i]}" cy="80" r="6"/><circle class="node" cx="${xs[i]}" cy="320" r="6"/></g>${resistor(e,xs[i],200,true)}`).join('')}`;
   }else if(nestedExpanded(state.graph)){
     const returnY=state.level.supplies?.length>1?340:315;
-    $('#circuit').innerHTML=`<path class="wire" d="M90 165 H245 M555 165 H700 V${returnY} H90 M245 165 V75 H555 V165 M245 165 V255 H555 V165"/>${battery(165,returnY)}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id);return resistor(edge,position.x,position.y)}).join('')}<circle class="node" cx="245" cy="165" r="6"/><circle class="node" cx="555" cy="165" r="6"/>`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 165 H245 M555 165 H700 V${returnY} H90 M245 165 V75 H555 V165 M245 165 V255 H555 V165"/>${battery(165,returnY)}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id);return movingLead(edge,position)+resistor(edge,position.x,position.y)}).join('')}<circle class="node" cx="245" cy="165" r="6"/><circle class="node" cx="555" cy="165" r="6"/>`;
   }else if(edges.length===3&&usesVerticalMixed()){
     const [r1,r2,r3]=edges;
-    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H410 M410 80 H620 M410 300 H620 M410 300 H90"/>${battery(80,300)}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M500 80 V300"/><circle class="node" cx="500" cy="80" r="6"/><circle class="node" cx="500" cy="300" r="6"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M620 80 V300"/><circle class="node" cx="620" cy="80" r="6"/><circle class="node" cx="620" cy="300" r="6"/></g>${resistor(r1,250,80)}${resistor(r2,500,190,true)}${resistor(r3,620,190,true)}<circle class="node" cx="410" cy="80" r="6"/><circle class="node" cx="410" cy="300" r="6"/>`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H410 M410 80 H620 M410 300 H620 M410 300 H90"/>${battery(80,300)}${movingLead(r1,{x:250,y:80})}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M500 80 V300"/><circle class="node" cx="500" cy="80" r="6"/><circle class="node" cx="500" cy="300" r="6"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M620 80 V300"/><circle class="node" cx="620" cy="80" r="6"/><circle class="node" cx="620" cy="300" r="6"/></g>${resistor(r1,250,80)}${resistor(r2,500,190,true)}${resistor(r3,620,190,true)}<circle class="node" cx="410" cy="80" r="6"/><circle class="node" cx="410" cy="300" r="6"/>`;
   }else if(edges.length===2&&usesVerticalMixed()&&edges.some(edge=>resistorIsVertical(edge))){
-    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H620 V300 H90"/>${battery(80,300)}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id);return resistor(edge,position.x,position.y,resistorIsVertical(edge))}).join('')}`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H620 V300 H90"/>${battery(80,300)}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id),vertical=resistorIsVertical(edge);return movingLead(edge,position,vertical)+resistor(edge,position.x,position.y,vertical)}).join('')}`;
   }else if(edges.length===3&&state.level.layout==='mixed'){
     const [r1,r2,r3]=edges;
-    $('#circuit').innerHTML=`<path class="wire" d="M90 200 H370 M610 200 H680 V350 H90"/>${battery(200,350)}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M370 200 V115 H610 V200"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M370 200 V285 H610 V200"/></g>${resistor(r1,253,200)}${resistor(r2,490,115)}${resistor(r3,490,285)}<circle class="node" cx="370" cy="200" r="6"/><circle class="node" cx="610" cy="200" r="6"/>`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 200 H370 M610 200 H680 V350 H90"/>${battery(200,350)}${movingLead(r1,{x:253,y:200})}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M370 200 V115 H610 V200"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M370 200 V285 H610 V200"/></g>${resistor(r1,253,200)}${resistor(r2,490,115)}${resistor(r3,490,285)}<circle class="node" cx="370" cy="200" r="6"/><circle class="node" cx="610" cy="200" r="6"/>`;
   }else if(usesSeriesLoop()){
     const positions=edges.map(edge=>circuitPosition(state.graph,edge.id)),verticalIndex=Math.ceil((edges.length-1)/2);
-    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H640 V300 H90"/>${battery(80,300)}${edges.map((edge,index)=>resistor(edge,positions[index].x,positions[index].y,index===verticalIndex)).join('')}`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 80 H640 V300 H90"/>${battery(80,300)}${edges.map((edge,index)=>movingLead(edge,positions[index],index===verticalIndex)+resistor(edge,positions[index].x,positions[index].y,index===verticalIndex)).join('')}`;
   }else{
     const positions=edges.map(edge=>circuitPosition(state.graph,edge.id));
     const wrapped=state.level.layout==='series'&&edges.length>3;
     const top=wrapped?120:100,bottom=wrapped?260:300;
-    $('#circuit').innerHTML=`<path class="wire" d="M90 ${top} H680 V${bottom} H90"/>${battery(top,bottom)}${edges.map((edge,index)=>resistor(edge,positions[index].x,positions[index].y)).join('')}`;
+    $('#circuit').innerHTML=`<path class="wire" d="M90 ${top} H680 V${bottom} H90"/>${battery(top,bottom)}${edges.map((edge,index)=>movingLead(edge,positions[index])+resistor(edge,positions[index].x,positions[index].y)).join('')}`;
   }
   renderKnownValues();
   bindComponents();
@@ -330,7 +330,7 @@ function submit(action){
 function reject(text){setMessage(text,'error');$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}
 
 function animateToEquivalent(nextGraph,equivalentId,done){
-  const elements=[...$('#circuit').querySelectorAll('.resistor')];
+  const circuit=$('#circuit'),elements=[...circuit.querySelectorAll('.resistor')];
   const selected=elements.filter(el=>el.classList.contains('selected'));
   if(!selected.length){done();return}
   const destination=circuitPosition(nextGraph,equivalentId);
@@ -339,8 +339,9 @@ function animateToEquivalent(nextGraph,equivalentId,done){
   const rails=$('#circuit').querySelector('.parallel-rails');
   const oldRailEnd=state.level.layout==='parallel'?Math.max(...state.graph.edges.map(edge=>circuitPosition(state.graph,edge.id).x)):0;
   const newRailEnd=state.level.layout==='parallel'?Math.max(...nextGraph.edges.map(edge=>circuitPosition(nextGraph,edge.id).x)):0;
-  const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:700,start=performance.now();
-  const frame=now=>{const raw=duration?Math.min(1,(now-start)/duration):1,t=1-Math.pow(1-raw,3);items.forEach(item=>{const x=item.x+(item.destination.x-item.cx)*t,y=item.y+(item.destination.y-item.cy)*t;item.el.setAttribute('transform',`translate(${x} ${y})`)});branches.forEach(branch=>branch.el.setAttribute('transform',`translate(${branch.dx*t} ${branch.dy*t})`));if(rails){const railEnd=oldRailEnd+(newRailEnd-oldRailEnd)*t;rails.setAttribute('d',`M90 80 H${railEnd} M90 320 H${railEnd}`)}if(raw<1)requestAnimationFrame(frame);else done()};
+  const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:760,start=performance.now();let crossed=false,ghost=null;
+  const crossfade=raw=>{if(!crossed&&raw>=.72){ghost=circuit.cloneNode(true);ghost.removeAttribute('id');ghost.classList.add('circuit-ghost');circuit.parentElement.appendChild(ghost);crossed=true;done();circuit.style.opacity='0'}if(crossed){const fade=Math.min(1,(raw-.72)/.28);ghost.style.opacity=String(1-fade);circuit.style.opacity=String(fade)}};
+  const frame=now=>{const raw=duration?Math.min(1,(now-start)/duration):1,t=1-Math.pow(1-raw,3);items.forEach(item=>{const x=item.x+(item.destination.x-item.cx)*t,y=item.y+(item.destination.y-item.cy)*t;item.el.setAttribute('transform',`translate(${x} ${y})`);if(item.chosen)item.el.style.opacity=String(Math.max(.18,1-raw*.75))});branches.forEach(branch=>{branch.el.setAttribute('transform',`translate(${branch.dx*t} ${branch.dy*t})`);if(state.selected.has(branch.el.dataset.edgeId))branch.el.style.opacity=String(Math.max(.14,1-raw*.8))});if(rails){const railEnd=oldRailEnd+(newRailEnd-oldRailEnd)*t;rails.setAttribute('d',`M90 80 H${railEnd} M90 320 H${railEnd}`)}crossfade(raw);if(raw<1)requestAnimationFrame(frame);else{if(!crossed)done();ghost?.remove();circuit.style.opacity=''}};
   requestAnimationFrame(frame);
 }
 function bestGroup(){

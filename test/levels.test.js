@@ -4,10 +4,11 @@ import { LEVELS } from '../dist/src/levels.js';
 import { loadProgress, saveResult } from '../dist/src/storage.js';
 import { isSolved, nearlyEqual, reduceGraph, solveCircuit, treeValues } from '../dist/src/solver.js';
 import { combineSupplies, levelSupply } from '../dist/src/supplies.js';
+import { CIRCUIT_FRAME, validateCustomLayout } from '../dist/src/layout.js';
 
 test('course contains sequential levels',()=>{
-  assert.equal(LEVELS.length,30);
-  assert.deepEqual(LEVELS.map(level=>level.id),Array.from({length:30},(_,index)=>index+1));
+  assert.equal(LEVELS.length,33);
+  assert.deepEqual(LEVELS.map(level=>level.id),Array.from({length:33},(_,index)=>index+1));
 });
 
 test('all-value levels follow current-only levels',()=>{
@@ -83,19 +84,17 @@ test('series supplies add voltage and retain the limiting amp hours',()=>{
   assert.deepEqual(combineSupplies([{voltage:6,capacity:4},{voltage:6,capacity:4}],'series'),{voltage:12,capacity:4});
 });
 
-test('custom resistor bodies do not overlap or hide junction nodes',()=>{
-  const halfWidth=55,halfHeight=22;
-  for(const level of LEVELS.filter(level=>level.layout==='custom')){
-    const boxes=level.graph.edges.map(edge=>({id:edge.id,x:level.positions[edge.id][0],y:level.positions[edge.id][1]}));
-    for(let left=0;left<boxes.length;left++)for(let right=left+1;right<boxes.length;right++){
-      const a=boxes[left],b=boxes[right];
-      assert.ok(Math.abs(a.x-b.x)>=halfWidth*2||Math.abs(a.y-b.y)>=halfHeight*2,`${level.topology}: ${a.id} overlaps ${b.id}`);
-    }
-    for(const node of level.graph.nodes){
-      const [x,y]=level.positions[node];
-      for(const box of boxes)assert.ok(Math.abs(x-box.x)>halfWidth||Math.abs(y-box.y)>halfHeight,`${level.topology}: ${node} is hidden by ${box.id}`);
-    }
-  }
+test('three-source battery arrays preserve the correct voltage and capacity rules',()=>{
+  const arrays=LEVELS.filter(level=>level.supplies?.length===3);
+  assert.equal(arrays.length,3);
+  assert.ok(arrays.every(level=>level.mode==='voltage'));
+  assert.deepEqual(levelSupply(arrays.find(level=>level.supplyConnection==='series')),{voltage:36,capacity:4});
+  assert.ok(arrays.filter(level=>level.supplyConnection==='parallel').every(level=>levelSupply(level).voltage===12&&levelSupply(level).capacity===300));
+});
+
+test('custom layouts satisfy the mobile component and lead constraints',()=>{
+  assert.ok(CIRCUIT_FRAME.lead>=8);
+  for(const level of LEVELS.filter(level=>level.layout==='custom'))assert.deepEqual(validateCustomLayout(level),[],`${level.topology} violates the circuit frame`);
 });
 
 test('late course applies current and voltage rules to mixed circuits',()=>{
@@ -115,10 +114,9 @@ test('mixed circuits vary between horizontal and vertical presentations',()=>{
   assert.ok(mixed.some(level=>level.mixedOrientation!=='vertical'));
 });
 
-test('offset-double layout keeps its series tail connected around the return corner',()=>{
+test('offset-double layout keeps its series tail connected through a clear dogleg',()=>{
   const level=LEVELS.find(item=>item.topology==='offset-double');
   assert.equal(level.topology,'offset-double');
-  assert.equal(level.positions.R5[1],level.positions.C[1]);
   assert.equal(level.positions.R5[1],level.positions.U[1]);
   assert.equal(level.positions.R6[0],level.positions.U[0]);
   assert.equal(level.positions.R6[0],level.positions.D[0]);
@@ -143,7 +141,7 @@ function reductionToSingle(start){
 
 test('every calculation level restores every required value',()=>{
   const calculationLevels=LEVELS.filter(level=>['complete','voltage'].includes(level.mode));
-  assert.equal(calculationLevels.length,12);
+  assert.equal(calculationLevels.length,15);
   for(const level of calculationLevels){
     assert.ok(['complete','voltage'].includes(level.mode),`level ${level.id} is a calculation level`);
     const supply=levelSupply(level);

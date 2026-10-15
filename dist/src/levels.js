@@ -1,3 +1,5 @@
+import { templatePositions } from './layout.js';
+
 const edge = (id, a, b, value, label = id) => ({ id, a, b, value, label });
 const graph = (nodes, edges) => ({ nodes, edges, nextId: 1 });
 const nested = (values) => graph(['A','B','T','U','D','E'],[
@@ -8,8 +10,7 @@ const parallelSeriesParallel=(values)=>graph(['A','B','C','D'],[
   edge('R1','A','B',values[0]),edge('R2','A','B',values[1]),edge('R3','B','C',values[2]),
   edge('R4','C','D',values[3]),edge('R5','C','D',values[4])
 ]);
-const parallelSeriesParallelPositions={A:[135,165],B:[285,165],C:[475,165],D:[625,165],R1:[210,80],R2:[210,250],R3:[380,165],R4:[550,80],R5:[550,250]};
-const custom=(id,name,mode,topology,nodes,edges,positions,best)=>({id,name,mode,title:'Simplify the circuit',prompt:'Select a valid section.',best,graph:graph(nodes,edges),layout:'custom',topology,positions});
+const custom=(id,name,mode,topology,nodes,edges,best)=>({id,name,mode,title:'Simplify the circuit',prompt:'Select a valid section.',best,graph:graph(nodes,edges),layout:'custom',topology,positions:templatePositions(topology)});
 
 const LEVELS_SOURCE = [
   { id:1, name:'First connection', mode:'relation', title:'Simplify the circuit', prompt:'Select a valid section.', best:1, graph:graph(['A','B','C'],[edge('R1','A','B',10),edge('R2','B','C',22)]), layout:'series' },
@@ -36,27 +37,30 @@ const LEVELS_SOURCE = [
   { id:22, name:'Four voltage drops', mode:'voltage', title:'Solve the voltage drops', prompt:'Determine V₁ through V₄.', best:7, voltage:20, graph:graph(['A','B','C','D','E'],[edge('R1','A','B',2),edge('R2','B','C',4),edge('R3','C','D',6),edge('R4','D','E',8)]), layout:'series' },
   { id:23, name:'Advanced paths', mode:'formula', title:'Simplify the circuit', prompt:'Select a valid section.', best:4, graph:nested([4,4,8,6,10,2]), layout:'nested' },
   { id:24, name:'Final circuit', mode:'formula', title:'Simplify the circuit', prompt:'Select a valid section.', best:4, supplies:[{voltage:12,capacity:3},{voltage:12,capacity:3}], supplyConnection:'parallel', graph:nested([3,9,3,8,4,6]), layout:'nested' },
-  custom(25,'Circuit','relation','sandwich',['A','B','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6),edge('R4','C','D',5)],{A:[150,165],B:[300,165],C:[500,165],D:[650,165],R1:[225,165],R2:[400,90],R3:[400,240],R4:[575,165]},2),
-  custom(26,'Circuit','relation','double-bank',['A','B','C'],[edge('R1','A','B',8),edge('R2','A','B',8),edge('R3','B','C',12),edge('R4','B','C',6)],{A:[180,165],B:[400,165],C:[620,165],R1:[290,90],R2:[290,240],R3:[510,90],R4:[510,240]},3),
-  custom(27,'Circuit','formula','split-series',['A','T','U','B'],[edge('R1','A','T',5),edge('R2','T','B',7),edge('R3','A','U',6),edge('R4','U','B',6)],{A:[190,165],T:[400,80],U:[400,250],B:[610,165],R1:[295,80],R2:[505,80],R3:[295,250],R4:[505,250]},3),
-  custom(28,'Circuit','formula','unequal-branches',['A','B','T','C','D'],[edge('R1','A','B',3),edge('R2','B','C',10),edge('R3','B','T',4),edge('R4','T','C',6),edge('R5','C','D',7)],{A:[130,165],B:[260,165],T:[410,80],C:[565,165],D:[700,165],R1:[195,165],R2:[410,235],R3:[320,80],R4:[500,80],R5:[635,165]},3),
-  custom(29,'Circuit','formula','three-way-tail',['A','B','T','U','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','T',3),edge('R4','T','C',9),edge('R5','B','U',5),edge('R6','U','C',10),edge('R7','C','D',6)],{A:[135,165],B:[265,165],T:[400,65],U:[400,265],C:[545,165],D:[670,165],R1:[200,165],R2:[400,165],R3:[310,65],R4:[490,65],R5:[310,265],R6:[490,265],R7:[607,165]},4),
-  custom(30,'Circuit','formula','offset-double',['A','B','T','C','U','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','U',5),edge('R6','U','D',5)],{A:[130,165],B:[260,165],T:[380,80],C:[500,165],U:[620,165],D:[620,285],R1:[195,165],R2:[320,80],R3:[440,80],R4:[380,250],R5:[560,165],R6:[620,225]},4),
+  custom(25,'Circuit','relation','sandwich',['A','B','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6),edge('R4','C','D',5)],2),
+  custom(26,'Circuit','relation','double-bank',['A','B','C'],[edge('R1','A','B',8),edge('R2','A','B',8),edge('R3','B','C',12),edge('R4','B','C',6)],3),
+  custom(27,'Circuit','formula','split-series',['A','T','U','B'],[edge('R1','A','T',5),edge('R2','T','B',7),edge('R3','A','U',6),edge('R4','U','B',6)],3),
+  custom(28,'Circuit','formula','unequal-branches',['A','B','T','C','D'],[edge('R1','A','B',3),edge('R2','B','C',10),edge('R3','B','T',4),edge('R4','T','C',6),edge('R5','C','D',7)],3),
+  custom(29,'Circuit','formula','three-way-tail',['A','B','T','U','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','T',3),edge('R4','T','C',9),edge('R5','B','U',5),edge('R6','U','C',10),edge('R7','C','D',6)],4),
+  custom(30,'Circuit','formula','offset-double',['A','B','T','C','U','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','U',5),edge('R6','U','D',5)],4),
   {id:31,name:'Circuit',mode:'complete',title:'Solve currents',prompt:'Determine every current.',best:7,voltage:24,graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed',mixedOrientation:'vertical'},
   {id:32,name:'Circuit',mode:'complete',title:'Solve currents',prompt:'Determine every current.',best:11,voltage:24,graph:nested([2,4,8,6,6,10]),layout:'nested'},
   {id:33,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:10,supplies:[{voltage:12,capacity:3},{voltage:12,capacity:5}],supplyConnection:'parallel',graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed'},
   {id:34,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:14,supplies:[{voltage:12,capacity:4},{voltage:12,capacity:4}],supplyConnection:'series',graph:nested([2,4,8,6,6,10]),layout:'nested'}
-  ,{...custom(35,'Circuit','formula','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,parallelSeriesParallelPositions,3)}
-  ,{...custom(36,'Circuit','complete','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,parallelSeriesParallelPositions,10),voltage:24}
-  ,{...custom(37,'Circuit','voltage','unequal-branches',['A','B','T','C','D'],[edge('R1','A','B',3),edge('R2','B','C',10),edge('R3','B','T',4),edge('R4','T','C',6),edge('R5','C','D',7)],{A:[130,165],B:[260,165],T:[410,80],C:[565,165],D:[700,165],R1:[195,165],R2:[410,235],R3:[320,80],R4:[500,80],R5:[635,165]},14),voltage:24}
-  ,{...custom(38,'Circuit','voltage','three-way-tail',['A','B','T','U','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','T',3),edge('R4','T','C',9),edge('R5','B','U',5),edge('R6','U','C',10),edge('R7','C','D',6)],{A:[135,165],B:[265,165],T:[400,65],U:[400,265],C:[545,165],D:[670,165],R1:[200,165],R2:[400,165],R3:[310,65],R4:[490,65],R5:[310,265],R6:[490,265],R7:[607,165]},18),voltage:24}
-  ,{...custom(39,'Circuit','voltage','offset-double',['A','B','T','C','U','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','U',5),edge('R6','U','D',5)],{A:[130,165],B:[260,165],T:[380,80],C:[500,165],U:[620,165],D:[620,285],R1:[195,165],R2:[320,80],R3:[440,80],R4:[380,250],R5:[560,165],R6:[620,225]},16),voltage:30}
-  ,{...custom(40,'Circuit','voltage','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,parallelSeriesParallelPositions,14),voltage:24}
+  ,{...custom(35,'Circuit','formula','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,3)}
+  ,{...custom(36,'Circuit','complete','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,10),voltage:24}
+  ,{...custom(37,'Circuit','voltage','unequal-branches',['A','B','T','C','D'],[edge('R1','A','B',3),edge('R2','B','C',10),edge('R3','B','T',4),edge('R4','T','C',6),edge('R5','C','D',7)],14),voltage:24}
+  ,{...custom(38,'Circuit','voltage','three-way-tail',['A','B','T','U','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','T',3),edge('R4','T','C',9),edge('R5','B','U',5),edge('R6','U','C',10),edge('R7','C','D',6)],18),voltage:24}
+  ,{...custom(39,'Circuit','voltage','offset-double',['A','B','T','C','U','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','U',5),edge('R6','U','D',5)],16),voltage:30}
+  ,{...custom(40,'Circuit','voltage','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,14),voltage:24}
+  ,{id:41,name:'Circuit',scenario:'Marine battery bank',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:8,supplies:[{voltage:12,capacity:100},{voltage:12,capacity:100},{voltage:12,capacity:100}],supplyConnection:'parallel',graph:graph(['A','B','C'],[edge('R1','A','B',6),edge('R2','B','C',12)]),layout:'series'}
+  ,{id:42,name:'Circuit',scenario:'Solar battery string',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:8,supplies:[{voltage:12,capacity:4},{voltage:12,capacity:4},{voltage:12,capacity:4}],supplyConnection:'series',graph:graph(['A','B'],[edge('R1','A','B',18),edge('R2','A','B',18)]),layout:'parallel'}
+  ,{id:43,name:'Circuit',scenario:'Motorhome battery bank',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:11,supplies:[{voltage:12,capacity:100},{voltage:12,capacity:100},{voltage:12,capacity:100}],supplyConnection:'parallel',graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed',mixedOrientation:'vertical'}
 ];
 
 // Teaching order: identify connections, apply formulas, solve currents, then solve all values.
 // The second near-identical series-identification question is deliberately omitted.
-const COURSE_ORDER=[1,3,4,25,26,13,5,6,17,18,7,27,20,35,28,19,30,29,8,9,31,36,32,11,37,40,38,39,33,34];
+const COURSE_ORDER=[1,3,4,25,26,13,5,6,17,18,7,27,20,35,28,19,30,29,8,9,31,36,32,11,37,40,38,39,41,33,42,43,34];
 export const LEVELS=COURSE_ORDER.map((sourceId,index)=>{
   const source=LEVELS_SOURCE.find(level=>level.id===sourceId);
   const mode=source.mode;
