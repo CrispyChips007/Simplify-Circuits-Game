@@ -5,7 +5,14 @@ import { levelSupply } from './supplies.js?v=20261014-38';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
-let levelIndex=Math.max(0,Math.min(progress.unlocked-1,LEVELS.length-1));
+const initialUnlocked=progress.unlocked;
+// TEMPORARY TESTING OVERRIDE — remove this entire block before public release.
+// It deliberately ignores saved progression so every level can be tested after an update.
+{
+  progress={...progress,unlocked:LEVELS.length};
+}
+// END TEMPORARY TESTING OVERRIDE.
+let levelIndex=Math.max(0,Math.min(initialUnlocked-1,LEVELS.length-1));
 let state;
 
 const fmt=value=>Number.isInteger(value)?String(value):Number(value.toFixed(2)).toString();
@@ -18,6 +25,11 @@ const seriesPositions=count=>{
   const bottom=spaced(bottomCount,245,575).reverse().map(x=>({x,y:260}));
   return [...top,...bottom];
 };
+const seriesLoopPositions=count=>{
+  const topCount=Math.ceil((count-1)/2),bottomCount=count-1-topCount;
+  return [...spaced(topCount,285,515).map(x=>({x,y:105})),{x:640,y:190},...spaced(bottomCount,285,515).reverse().map(x=>({x,y:275}))];
+};
+const usesSeriesLoop=(graph=state.graph)=>state.level.layout==='series'&&graph.edges.length>=3;
 const supply=()=>levelSupply(state.level);
 const supplyVoltage=()=>supply().voltage;
 const supplyCapacity=()=>supply().capacity;
@@ -46,10 +58,9 @@ function renderOriginal(){
   }else if(state.level.layout==='mixed'){
     $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 75 H350 M350 75 V25 H575 V75 M350 75 V110 H575 V75 M575 75 H625 V145 H145"/>${miniBattery(75,145)}${mini(edges[0],250,75)}${mini(edges[1],470,25)}${mini(edges[2],470,110)}`;
   }else{
-    if(edges.length>3){
-      const topCount=Math.ceil(edges.length/2),bottomCount=edges.length-topCount;
-      const positions=[...spaced(topCount,270,540).map(x=>({x,y:42})),...spaced(bottomCount,270,540).reverse().map(x=>({x,y:108}))];
-      $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 42 H625 V108 H145"/>${miniBattery(42,108)}${edges.map((edge,index)=>mini(edge,positions[index].x,positions[index].y,edges.length>=5?58:70,30)).join('')}`;
+    if(edges.length>=3){
+      const topCount=Math.ceil((edges.length-1)/2),bottomCount=edges.length-1-topCount,positions=[...spaced(topCount,285,500).map(x=>({x,y:28})),{x:625,y:75,vertical:true},...spaced(bottomCount,285,500).reverse().map(x=>({x,y:122}))];
+      $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 28 H625 V122 H145"/>${miniBattery(28,122)}${edges.map((edge,index)=>mini(edge,positions[index].x,positions[index].y,positions[index].vertical?28:edges.length>=5?58:70,positions[index].vertical?66:30)).join('')}`;
     }else{
       const xs=spaced(edges.length,260,520);
       $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 62 H625 V128 H145"/>${miniBattery(62,128)}${edges.map((edge,index)=>mini(edge,xs[index],62,80)).join('')}`;
@@ -84,6 +95,7 @@ function circuitPosition(graph,edgeId){
   const allParallel=state.level.layout==='parallel'&&edges.every(edge=>[edge.a,edge.b].sort().join('|')===[edges[0].a,edges[0].b].sort().join('|'));
   if(allParallel){const xs=edges.length===1?[380]:edges.length===2?[320,440]:edges.length===3?[250,380,510]:edges.map((_,i)=>260+i*100);return{x:xs[index],y:200}}
   if(edges.length===3&&state.level.layout==='mixed')return[{x:253,y:200},{x:490,y:115},{x:490,y:285}][index];
+  if(usesSeriesLoop(graph))return seriesLoopPositions(edges.length)[index];
   return seriesPositions(edges.length)[index];
 }
 
@@ -92,7 +104,7 @@ function customWirePath(edge,graph=state.graph){
   return `M${a[0]} ${a[1]} V${p.y} H${b[0]} V${b[1]}`;
 }
 
-function currentPill(selectable=false){const current=fmt(currentValue());return `<g class="current-component${selectable?' selectable':''}${state.selected.has('CURRENT')?' selected':''}"${selectable?` data-id="CURRENT" tabindex="0" role="button" aria-label="I total equals ${current} amps"`:''}><rect class="value-pill" x="50" y="144" width="124" height="27" rx="14"/><text class="value-pill-text" x="112" y="163">I<tspan class="subscript" baseline-shift="sub">Total</tspan> = ${current} A</text></g>`}
+function currentPill(selectable=false){const current=fmt(currentValue());return `<g class="current-component${selectable?' selectable':''}${state.selected.has('CURRENT')?' selected':''}"${selectable?` data-id="CURRENT" tabindex="0" role="button" aria-label="I total equals ${current} amps"`:''}><rect class="value-pill" x="50" y="38" width="124" height="27" rx="14"/><text class="value-pill-text" x="112" y="57">I<tspan class="subscript" baseline-shift="sub">Total</tspan> = ${current} A</text></g>`}
 
 function renderKnownValues(){
   if(!['complete','voltage'].includes(state.level.mode))return;
@@ -126,6 +138,9 @@ function renderCircuit(){
   }else if(edges.length===3&&state.level.layout==='mixed'){
     const [r1,r2,r3]=edges;
     $('#circuit').innerHTML=`<path class="wire" d="M90 200 H370 M610 200 H680 V350 H90"/>${battery(200,350)}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M370 200 V115 H610 V200"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M370 200 V285 H610 V200"/></g>${resistor(r1,253,200)}${resistor(r2,490,115)}${resistor(r3,490,285)}<circle class="node" cx="370" cy="200" r="6"/><circle class="node" cx="610" cy="200" r="6"/>`;
+  }else if(usesSeriesLoop()){
+    const positions=edges.map(edge=>circuitPosition(state.graph,edge.id)),verticalIndex=Math.ceil((edges.length-1)/2);
+    $('#circuit').innerHTML=`<path class="wire" d="M90 105 H640 V275 H90"/>${battery(105,275)}${edges.map((edge,index)=>resistor(edge,positions[index].x,positions[index].y,index===verticalIndex)).join('')}`;
   }else{
     const positions=edges.map(edge=>circuitPosition(state.graph,edge.id));
     const wrapped=state.level.layout==='series'&&edges.length>3;
@@ -298,5 +313,6 @@ function showResult(){
   $('#completeDialog').showModal();
 }
 
-$('#hintButton').addEventListener('click',hint);$('#restartButton').addEventListener('click',()=>loadLevel(levelIndex));$('#resultButton').addEventListener('click',showResult);$('#levelsButton').addEventListener('click',()=>{renderLevels();$('#levelsDialog').showModal()});$('#nextButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(Math.min(levelIndex+1,LEVELS.length-1))});$('#replayButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(levelIndex)});$('#startAgainButton').addEventListener('click',()=>{progress=resetProgress();$('#chapterDialog').close();loadLevel(0)});$('#reviewLevelsButton').addEventListener('click',()=>{$('#chapterDialog').close();renderLevels();$('#levelsDialog').showModal()});document.addEventListener('click',event=>{if(event.target.dataset.open)$(`#${event.target.dataset.open}`).showModal();if(event.target.dataset.close)$(`#${event.target.dataset.close}`).close()});
+$('#hintButton').addEventListener('click',hint);$('#restartButton').addEventListener('click',()=>loadLevel(levelIndex));$('#resultButton').addEventListener('click',showResult);$('#levelsButton').addEventListener('click',()=>{renderLevels();$('#levelsDialog').showModal()});$('#nextButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(Math.min(levelIndex+1,LEVELS.length-1))});$('#replayButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(levelIndex)});$('#startAgainButton').addEventListener('click',()=>{progress=resetProgress();progress={...progress,unlocked:LEVELS.length}; // TEMP: keep all levels unlocked during testing.
+$('#chapterDialog').close();loadLevel(0)});$('#reviewLevelsButton').addEventListener('click',()=>{$('#chapterDialog').close();renderLevels();$('#levelsDialog').showModal()});document.addEventListener('click',event=>{if(event.target.dataset.open)$(`#${event.target.dataset.open}`).showModal();if(event.target.dataset.close)$(`#${event.target.dataset.close}`).close()});
 loadLevel(levelIndex);
