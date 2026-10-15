@@ -194,7 +194,13 @@ function render(){
   $('#actions').className=`actions${level.mode!=='relation'?' formula-bank':''}`;
   $('#actions').innerHTML=actions().map(([id,label])=>`<button class="action${label.includes('<math')?' formula':''}" data-action="${id}">${label}</button>`).join('');
   $('#actions').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>submit(button.dataset.action)));
-  renderOriginal();renderCircuit();renderSelection();
+  renderOriginal();renderCircuit();renderSelection();applyResponsiveViewBoxes();
+}
+
+function applyResponsiveViewBoxes(){
+  const mobile=matchMedia('(max-width:540px)').matches;
+  $('#circuit').setAttribute('viewBox',mobile&&state.level.layout!=='custom'?'30 0 700 390':'0 0 760 390');
+  $('#referenceCircuit').setAttribute('viewBox',mobile?'105 0 620 150':'0 0 760 150');
 }
 
 function explain(relation,chosen){
@@ -338,4 +344,5 @@ function showResult(){
 
 $('#hintButton').addEventListener('click',hint);$('#restartButton').addEventListener('click',()=>loadLevel(levelIndex));$('#resultButton').addEventListener('click',showResult);$('#levelsButton').addEventListener('click',()=>{renderLevels();$('#levelsDialog').showModal()});$('#nextButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(Math.min(levelIndex+1,LEVELS.length-1))});$('#replayButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(levelIndex)});$('#startAgainButton').addEventListener('click',()=>{progress=resetProgress();progress={...progress,unlocked:LEVELS.length}; // TEMP: keep all levels unlocked during testing.
 $('#chapterDialog').close();loadLevel(0)});$('#reviewLevelsButton').addEventListener('click',()=>{$('#chapterDialog').close();renderLevels();$('#levelsDialog').showModal()});document.addEventListener('click',event=>{if(event.target.dataset.open)$(`#${event.target.dataset.open}`).showModal();if(event.target.dataset.close)$(`#${event.target.dataset.close}`).close()});
+addEventListener('resize',applyResponsiveViewBoxes);
 loadLevel(levelIndex);
