@@ -88,8 +88,9 @@ function renderOriginal(){
 function nestedExpanded(graph){const direct=graph.edges.filter(edge=>new Set([edge.a,edge.b]).has('B')&&new Set([edge.a,edge.b]).has('D')).length;return state.level.layout==='nested'&&(graph.nodes.includes('T')||graph.nodes.includes('U')||direct>1)}
 function nestedPosition(graph,edge){
   const endpoints=new Set([edge.a,edge.b]);
-  if(endpoints.has('A')&&endpoints.has('B'))return{x:165,y:165};
-  if(endpoints.has('D')&&endpoints.has('E'))return{x:635,y:165};
+  const bankedSupply=state.level.supplies?.length>1;
+  if(endpoints.has('A')&&endpoints.has('B'))return{x:165,y:bankedSupply?100:165};
+  if(endpoints.has('D')&&endpoints.has('E'))return{x:635,y:bankedSupply?100:165};
   if(endpoints.has('T'))return{x:endpoints.has('B')?330:470,y:75};
   if(endpoints.has('U'))return{x:endpoints.has('B')?330:470,y:255};
   if(endpoints.has('B')&&endpoints.has('D')){const numbers=String(edge.label||edge.id).match(/\d+/g)?.map(Number)||[];return{x:400,y:numbers.some(number=>number===2||number===3)?75:255}}
@@ -155,8 +156,9 @@ function renderCircuit(){
     const railEnd=Math.max(...xs);
     $('#circuit').innerHTML=`<path class="wire parallel-rails" d="M90 80 H${railEnd} M90 320 H${railEnd}"/>${battery(80,320)}${edges.map((e,i)=>`<g class="moving-wires" data-edge-id="${e.id}"><path class="wire" d="M${xs[i]} 80 V320"/><circle class="node" cx="${xs[i]}" cy="80" r="6"/><circle class="node" cx="${xs[i]}" cy="320" r="6"/></g>${resistor(e,xs[i],200,true)}`).join('')}`;
   }else if(nestedExpanded(state.graph)){
-    const supplyTop=state.phase==='supply'?100:165;
-    $('#circuit').innerHTML=`<path class="wire" d="M90 165 H245 M555 165 H700 V315 H90 M245 165 V75 H555 V165 M245 165 V255 H555 V165"/>${battery(supplyTop,315)}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id);return resistor(edge,position.x,position.y)}).join('')}<circle class="node" cx="245" cy="165" r="6"/><circle class="node" cx="555" cy="165" r="6"/>`;
+    const bankedSupply=state.level.supplies?.length>1,leadY=bankedSupply?100:165;
+    const outer=bankedSupply?'M90 100 H245 V165 M555 165 V100 H700 V315 H90':'M90 165 H245 M555 165 H700 V315 H90';
+    $('#circuit').innerHTML=`<path class="wire" d="${outer} M245 165 V75 H555 V165 M245 165 V255 H555 V165"/>${battery(leadY,315)}${edges.map(edge=>{const position=circuitPosition(state.graph,edge.id);return resistor(edge,position.x,position.y)}).join('')}<circle class="node" cx="245" cy="165" r="6"/><circle class="node" cx="555" cy="165" r="6"/>`;
   }else if(edges.length===3&&usesVerticalMixed()){
     const [r1,r2,r3]=edges;
     $('#circuit').innerHTML=`<path class="wire" d="M90 80 H410 M410 80 H620 M410 300 H620 M410 300 H90"/>${battery(80,300)}<g class="moving-wires" data-edge-id="${r2.id}"><path class="wire" d="M500 80 V300"/><circle class="node" cx="500" cy="80" r="6"/><circle class="node" cx="500" cy="300" r="6"/></g><g class="moving-wires" data-edge-id="${r3.id}"><path class="wire" d="M620 80 V300"/><circle class="node" cx="620" cy="80" r="6"/><circle class="node" cx="620" cy="300" r="6"/></g>${resistor(r1,250,80)}${resistor(r2,500,190,true)}${resistor(r3,620,190,true)}<circle class="node" cx="410" cy="80" r="6"/><circle class="node" cx="410" cy="300" r="6"/>`;
