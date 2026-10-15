@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculationComplete } from '../dist/src/completion.js';
 import { LEVELS } from '../dist/src/levels.js';
+import { levelSupply } from '../dist/src/supplies.js';
+
+test('level 24 combines two 12 volt supplies into 24 volts',()=>{
+  const level=LEVELS[23];
+  assert.deepEqual(level.supplies.map(supply=>supply.voltage),[12,12]);
+  assert.equal(levelSupply(level).voltage,24);
+});
 
 test('level 24 completes from all original resistor values despite extra group state',()=>{
   const level=LEVELS[23];

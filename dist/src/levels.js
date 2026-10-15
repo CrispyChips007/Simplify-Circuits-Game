@@ -40,7 +40,7 @@ const LEVELS_SOURCE = [
   {id:31,name:'Circuit',mode:'complete',title:'Solve currents',prompt:'Determine every current.',best:7,voltage:24,graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed',mixedOrientation:'vertical'},
   {id:32,name:'Circuit',mode:'complete',title:'Solve currents',prompt:'Determine every current.',best:11,voltage:24,graph:nested([2,4,8,6,6,10]),layout:'nested'},
   {id:33,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:10,supplies:[{voltage:12,capacity:3},{voltage:12,capacity:5}],supplyConnection:'parallel',graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed'},
-  {id:34,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:14,supplies:[{voltage:6,capacity:4},{voltage:6,capacity:4}],supplyConnection:'series',graph:nested([2,4,8,6,6,10]),layout:'nested'}
+  {id:34,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:14,supplies:[{voltage:12,capacity:4},{voltage:12,capacity:4}],supplyConnection:'series',graph:nested([2,4,8,6,6,10]),layout:'nested'}
 ];
 
 // Teaching order: identify connections, apply formulas, solve currents, then solve all values.
