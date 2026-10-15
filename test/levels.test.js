@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LEVELS } from '../dist/src/levels.js';
 import { loadProgress, saveResult } from '../dist/src/storage.js';
-import { isSolved, reduceGraph } from '../dist/src/solver.js';
+import { isSolved, nearlyEqual, reduceGraph, solveCircuit, treeValues } from '../dist/src/solver.js';
 import { combineSupplies, levelSupply } from '../dist/src/supplies.js';
 
 test('course contains sequential levels',()=>{
@@ -113,4 +113,40 @@ test('mixed circuits vary between horizontal and vertical presentations',()=>{
   const mixed=LEVELS.filter(level=>level.layout==='mixed');
   assert.ok(mixed.some(level=>level.mixedOrientation==='vertical'));
   assert.ok(mixed.some(level=>level.mixedOrientation!=='vertical'));
+});
+
+function reductionToSingle(start){
+  const queue=[structuredClone(start)],seen=new Set();
+  while(queue.length){
+    const graph=queue.shift();
+    if(isSolved(graph))return graph.edges[0];
+    const key=graph.edges.map(edge=>`${edge.id}:${edge.a}-${edge.b}`).sort().join('|');
+    if(seen.has(key))continue;
+    seen.add(key);
+    const ids=graph.edges.map(edge=>edge.id);
+    for(let mask=1;mask<(1<<ids.length);mask++){
+      const result=reduceGraph(graph,ids.filter((_,index)=>mask&(1<<index)));
+      if(result.ok)queue.push(result.graph);
+    }
+  }
+  return null;
+}
+
+test('calculation levels 18 through 24 restore every required value',()=>{
+  const calculationLevels=LEVELS.slice(17);
+  assert.equal(calculationLevels.length,7);
+  for(const level of calculationLevels){
+    assert.ok(['complete','voltage'].includes(level.mode),`level ${level.id} is a calculation level`);
+    const supply=levelSupply(level);
+    const equivalent=reductionToSingle(level.graph);
+    assert.ok(equivalent,`level ${level.id} reduces to one equivalent resistance`);
+    const restored=treeValues(equivalent,supply.voltage);
+    const direct=solveCircuit(level.graph,supply.voltage);
+    assert.ok(nearlyEqual(restored[equivalent.id].current,direct.totalCurrent),`level ${level.id} total current`);
+    for(const edge of level.graph.edges){
+      assert.ok(restored[edge.id],`level ${level.id} restores ${edge.id}`);
+      assert.ok(nearlyEqual(restored[edge.id].current,direct.resistors[edge.id].current),`level ${level.id} ${edge.id} current`);
+      assert.ok(nearlyEqual(restored[edge.id].voltage,direct.resistors[edge.id].voltage),`level ${level.id} ${edge.id} voltage`);
+    }
+  }
 });
