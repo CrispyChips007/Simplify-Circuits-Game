@@ -1,4 +1,4 @@
-import { LEVELS } from './levels.js?v=20261015-58';
+import { LEVELS } from './levels.js?v=20261015-59';
 import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261015-44';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
@@ -95,6 +95,8 @@ function renderOriginal(){
       $('#referenceCircuit').innerHTML=`<path class="wire" d="M145 25 H625 V125 H145"/>${miniBattery(25,125)}${edges.map((edge,index)=>mini(edge,xs[index],25)).join('')}`;
     }
   }
+  const reference=$('#referenceCircuit');
+  reference.innerHTML=`<g class="reference-proportions" transform="translate(48 0) scale(.88 1)">${reference.innerHTML}</g>`;
 }
 
 function nestedExpanded(graph){const direct=graph.edges.filter(edge=>new Set([edge.a,edge.b]).has('B')&&new Set([edge.a,edge.b]).has('D')).length;return state.level.layout==='nested'&&(graph.nodes.includes('T')||graph.nodes.includes('U')||direct>1)}
