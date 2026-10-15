@@ -1,5 +1,5 @@
 import { LEVELS } from './levels.js?v=20261015-42';
-import { cloneGraph, expandEdge, isSolved, relationship, reduceGraph, treeValues } from './solver.js?v=20261014-38';
+import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261015-44';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 
@@ -110,7 +110,7 @@ function currentPill(selectable=false){const current=fmt(currentValue());return 
 function renderKnownValues(){
   if(!['complete','voltage'].includes(state.level.mode))return;
   if(!['total','expand','restored'].includes(state.phase))return;
-  if(state.current!==null)$('#circuit').insertAdjacentHTML('beforeend',currentPill(!state.solved&&state.graph.edges.length===1));
+  if(state.current!==null)$('#circuit').insertAdjacentHTML('beforeend',currentPill(!state.solved));
   const labels=state.graph.edges.flatMap(edge=>{
     const known=state.known[edge.id]||{},value=state.values[edge.id],position=circuitPosition(state.graph,edge.id),number=(edge.label||edge.id).replace(/^R/,'').replace(/,/g,'‚'),selectable=!state.solved,vertical=state.level.layout==='parallel'||(usesVerticalMixed()&&state.graph.edges.length===3&&state.graph.edges.indexOf(edge)>0),items=[];
     if(known.current&&value&&state.graph.edges.length!==1){const id=`CURRENT:${edge.id}`,y=vertical?position.y-135:position.y-55;items.push(`<g class="resistor-current${selectable?' selectable':''}${state.selected.has(id)?' selected':''}" data-id="${id}" tabindex="0" role="button"><rect class="current-hitbox" x="${position.x-50}" y="${y}" width="100" height="25" rx="12"/><text class="value-pill-text circuit-value" x="${position.x}" y="${y+18}">I${subscriptNumber(number)} = ${fmt(value.current)} A</text></g>`)}
@@ -230,6 +230,29 @@ function submit(action){
   }
   if(calculationLevel&&state.phase==='expand'){
     const resistorIds=selectedResistorIds();
+    if(['same-current','same-voltage'].includes(action)&&resistorIds.length){
+      const property=action==='same-current'?'current':'voltage',prefix=property==='current'?'CURRENT:':'VOLTAGE:',resistor=resistorIds.length===1?state.graph.edges.find(edge=>edge.id===resistorIds[0]):null;
+      const ownValue=resistor&&(state.selected.has(`${prefix}${resistor.id}`)||(property==='current'&&state.graph.edges.length===1&&state.selected.has('CURRENT')));
+      if(resistor?.history&&ownValue){
+        if(resistor.history.type!==(property==='current'?'series':'parallel')){reject('That rule does not match this saved group.');return}
+        const result=expandEdge(state.graph,resistor.id);state.graph=result.graph;delete state.known[resistor.id];
+        result.graph.edges.filter(edge=>resistor.history.children.some(child=>child.id===edge.id)).forEach(edge=>{state.known[edge.id]={[property]:true}});
+        state.selected.clear();if(finishCalculationIfReady())return;render();setMessage('Valid rule.','good');return
+      }
+      const selectedTokens=[...state.selected].filter(id=>id.startsWith(prefix)),special=property==='voltage'&&state.selected.has('SUPPLY')?'SUPPLY':property==='current'&&state.selected.has('CURRENT')?'CURRENT':null;
+      if(selectedTokens.length+(special?1:0)!==1){reject(`Select one known ${property} value.`);return}
+      const sourceId=selectedTokens[0]?.slice(prefix.length),sourceValue=special==='SUPPLY'?supplyVoltage():special==='CURRENT'?state.current:state.values[sourceId]?.[property];
+      const targets=resistorIds.filter(id=>id!==sourceId);
+      if(!targets.length){reject(`Select a resistance to receive the ${property} value.`);return}
+      if(property==='voltage'){
+        const endpointKey=edge=>[edge.a,edge.b].sort().join('|'),sourceKey=special==='SUPPLY'?[state.level.graph.nodes[0],state.level.graph.nodes[state.level.graph.nodes.length-1]].sort().join('|'):endpointKey(state.graph.edges.find(edge=>edge.id===sourceId));
+        if(targets.some(id=>endpointKey(state.graph.edges.find(edge=>edge.id===id))!==sourceKey)){reject('Those components are not connected across the same two nodes.');return}
+      }
+      if(property==='current'&&sourceId){const relation=relationship(state.graph,[sourceId,...targets]);if(relation?.type!=='series'){reject('Those components do not form one unbranched series path.');return}}
+      if(sourceValue===null||sourceValue===undefined||targets.some(id=>!nearlyEqual(state.values[id]?.[property],sourceValue))){reject(`Those components do not have the same ${property}.`);return}
+      targets.forEach(id=>{state.known[id]={...(state.known[id]||{}),[property]:true}});state.selected.clear();
+      if(finishCalculationIfReady())return;render();setMessage(`${property==='current'?'Current':'Voltage'} carried to the selected component${targets.length===1?'':'s'}.`,'good');return
+    }
     if(resistorIds.length!==1){reject('Select one resistance value.');return}
     const resistor=state.graph.edges.find(edge=>edge.id===resistorIds[0]);
     const known=state.known[resistor.id]||{};
@@ -247,15 +270,6 @@ function submit(action){
       known.current=true;state.known[resistor.id]=known;state.selected.clear();
       if(finishCalculationIfReady())return;
       render();setMessage('Current calculated.','good');return
-    }
-    if(resistor.history){
-      const required=resistor.history.type==='series'?'same-current':'same-voltage',valueId=`${resistor.history.type==='series'?'CURRENT':'VOLTAGE'}:${resistor.id}`;
-      if(action!==required){reject('That rule does not match this saved group.');return}
-      const selectedValue=state.selected.has(valueId)||(resistor.history.type==='series'&&state.graph.edges.length===1&&state.selected.has('CURRENT'));
-      if(!state.known[resistor.id]?.[resistor.history.type==='series'?'current':'voltage']||!selectedValue){reject(resistor.history.type==='series'?'Select the current for this group.':'Select the voltage for this group.');return}
-      const result=expandEdge(state.graph,resistor.id);state.graph=result.graph;delete state.known[resistor.id];
-      result.graph.edges.filter(edge=>resistor.history.children.some(child=>child.id===edge.id)).forEach(edge=>{state.known[edge.id]={[resistor.history.type==='series'?'current':'voltage']:true}});
-      state.selected.clear();if(finishCalculationIfReady())return;render();setMessage('Valid rule.','good');return
     }
     reject('That rule cannot determine a missing value here.');return
   }
