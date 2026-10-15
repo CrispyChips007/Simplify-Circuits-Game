@@ -214,7 +214,7 @@ function render(){
   $('#levelNumber').textContent=`LEVEL ${level.id}`;$('#levelName').textContent=`Circuit ${level.id}`;$('#turnCount').textContent=state.turns;$('#promptTitle').textContent=level.title;$('#promptText').textContent=level.prompt;
   $('#actions').className=`actions${level.mode!=='relation'?' formula-bank':''}`;
   $('#actions').innerHTML=actions().map(([id,label])=>`<button class="action${label.includes('<math')?' formula':''}" data-action="${id}">${label}</button>`).join('');
-  $('#actions').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>submit(button.dataset.action)));
+  $('#actions').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{submit(button.dataset.action);button.blur()}));
   renderOriginal();renderCircuit();renderSelection();applyResponsiveViewBoxes();
 }
 
