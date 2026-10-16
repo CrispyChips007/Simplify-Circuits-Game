@@ -272,9 +272,9 @@ function applyResponsiveViewBoxes(){
 }
 
 function explain(relation,chosen){
-  if(!relation)return chosen==='parallel'?'Parallel resistors sit on separate branches between the same two connection points.':'Series resistors must follow one current path with no branches between them.';
-  if(relation.type!==chosen)return chosen==='parallel'?'These resistors do not sit on separate branches between the same two connection points.':'A branch splits the current between these resistors, so they are not in series.';
-  return relation.type==='parallel'?'Separate branches between the same connection points: parallel.':'One current path with no branches: series.';
+  if(!relation)return chosen==='parallel'?'Parallel resistors must sit on separate circuit branches.':'Series resistors must follow one current path with no branches between them.';
+  if(relation.type!==chosen)return chosen==='parallel'?'These resistors do not sit on separate branches.':'A branch splits the current between these resistors, so they are not in series.';
+  return relation.type==='parallel'?'These resistors sit on separate branches: parallel.':'One current path with no branches: series.';
 }
 
 function selectedResistorIds(){const edgeIds=new Set(state.graph.edges.map(edge=>edge.id));return [...state.selected].filter(id=>edgeIds.has(id))}
@@ -320,7 +320,7 @@ function submit(action){
       if(!targets.length){reject(`Select a resistance to receive the ${property} value.`);return}
       if(property==='voltage'){
         const endpointKey=edge=>[edge.a,edge.b].sort().join('|'),sourceKey=special==='SUPPLY'?[state.level.graph.nodes[0],state.level.graph.nodes[state.level.graph.nodes.length-1]].sort().join('|'):endpointKey(state.graph.edges.find(edge=>edge.id===sourceId));
-        if(targets.some(id=>endpointKey(state.graph.edges.find(edge=>edge.id===id))!==sourceKey)){reject('Those resistors are not on branches between the same two connection points.');return}
+      if(targets.some(id=>endpointKey(state.graph.edges.find(edge=>edge.id===id))!==sourceKey)){reject('These resistors do not sit on separate branches.');return}
       }
       if(property==='current'&&sourceId){const relation=relationship(state.graph,[sourceId,...targets]);if(relation?.type!=='series'){reject('Those resistors are not on one current path.');return}}
       if(sourceValue===null||sourceValue===undefined||targets.some(id=>!nearlyEqual(state.values[id]?.[property],sourceValue))){reject(`Those resistors do not have the same ${property}.`);return}
