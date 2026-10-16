@@ -68,7 +68,7 @@ export function originalResistorNumbers(edge) {
 
 export function reduceGraph(graph, ids) {
   const relation = relationship(graph, ids);
-  if (!relation) return { ok: false, graph, reason: 'Those resistors do not form one reducible group.' };
+  if (!relation) return { ok: false, graph, reason: 'Those resistors cannot be combined in one step.' };
   const next = cloneGraph(graph);
   const id = `E${next.nextId++}`;
   const chosen = new Set(ids);
@@ -93,7 +93,7 @@ export function nearlyEqual(a, b) { return Math.abs(a - b) <= EPSILON * Math.max
 
 export function expandEdge(graph,edgeId){
   const edge=graph.edges.find(item=>item.id===edgeId);
-  if(!edge?.history?.children)return {ok:false,graph,reason:'That resistance has no saved components to restore.'};
+  if(!edge?.history?.children)return {ok:false,graph,reason:'That resistance has no earlier resistors to restore.'};
   const next=cloneGraph(graph),index=next.edges.findIndex(item=>item.id===edgeId);
   next.edges.splice(index,1,...edge.history.children.map(item=>structuredClone(item)));
   next.nodes=[...new Set(next.edges.flatMap(item=>[item.a,item.b]))];

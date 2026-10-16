@@ -7,23 +7,23 @@
   <title>Circuit Fold</title>
   <meta name="description" content="Fold complex circuits into their simplest form, then solve every value.">
   <link rel="stylesheet" href="game.css?v=20261015-49">
-  <link rel="stylesheet" href="refinements.css?v=20261015-57">
+  <link rel="stylesheet" href="refinements.css?v=20261016-58">
   <link rel="stylesheet" href="./circuit-fold.css?v=20261015-1">
   </head>
 <body>
   <div class="ad ad-top" aria-label="Advertisement">Advertisement</div>
   <header class="site-header">
     <a class="brand" href="./" aria-label="Circuit Fold home"><i aria-hidden="true"></i>CIRCUIT FOLD</a>
-    <nav><button class="level-select-button" id="levelsButton"><span aria-hidden="true">▦</span> Level select</button><button class="text-button" data-open="howDialog">How to play</button></nav>
+    <nav><button class="level-select-button" id="levelsButton"><span aria-hidden="true">▦</span> Level select</button><button class="text-button how-button" data-open="howDialog">How to play</button></nav>
   </header>
   <main class="layout">
     <aside class="ad ad-side ad-side-left" aria-label="Advertisement">Advertisement</aside>
     <section class="game-card" id="gameCard">
-      <div class="level-line"><div><span id="levelNumber">LEVEL 1</span><strong id="levelName">First connection</strong></div><div class="turns"><span>TURNS</span><strong id="turnCount">0</strong></div></div>
-      <div class="prompt"><h1 id="promptTitle">How are these connected?</h1><p id="promptText">The resistors are already selected.</p></div>
+      <div class="level-line"><div><span id="levelNumber">LEVEL 1</span></div><div class="turns"><span>TURNS</span><strong id="turnCount">0</strong></div></div>
+      <div class="prompt"><h1 id="promptTitle">How are these connected?</h1></div>
       <div class="reference-strip"><span>ORIGINAL CIRCUIT</span><svg id="referenceCircuit" viewBox="0 0 760 150" role="img" aria-label="Original circuit reference"></svg></div>
-      <div class="circuit-wrap"><svg id="circuit" viewBox="0 0 760 390" role="img" aria-label="Interactive electrical circuit"></svg><div class="selection-chip"><span>Selected</span><strong id="selectionText">R1 + R2</strong></div></div>
-      <p class="message" id="message" aria-live="polite">Choose the connection.</p>
+      <div class="circuit-wrap"><svg id="circuit" viewBox="0 0 760 390" role="img" aria-label="Interactive electrical circuit"></svg><div class="selection-chip"><div class="selection-summary"><span>Selected</span><strong id="selectionText">No component selected</strong></div><p class="selection-feedback" id="message" aria-live="polite"></p></div></div>
+      <div class="tutorial-pointer" id="tutorialPointer" aria-hidden="true" hidden><span>☝</span></div>
       <div class="actions" id="actions"></div>
       <div class="under-actions"><button class="hint-button" id="hintButton">Hint <span>+1 turn</span></button><button class="restart-button" id="restartButton"><span aria-hidden="true">↻</span> Restart level</button><button class="result-button" id="resultButton" hidden>Finish level</button></div>
     </section>
@@ -33,9 +33,9 @@
   <footer>Trace the path. Find the pattern.</footer>
 
   <dialog id="levelsDialog"><div class="dialog-head"><div><small>YOUR PROGRESS</small><h2>Choose a level</h2></div><button class="close-button" data-close="levelsDialog">×</button></div><div class="level-grid" id="levelGrid"></div></dialog>
-  <dialog id="howDialog"><div class="dialog-head"><div><small>THE BASICS</small><h2>How to play</h2></div><button class="close-button" data-close="howDialog">×</button></div><ol class="how-list"><li><b>Select</b> resistors that form a reducible group.</li><li><b>Choose</b> their relationship, formula, or circuit rule.</li><li><b>Repeat</b> until the circuit is solved.</li></ol><p>Every submitted answer costs one turn. A hint also costs one turn. Selecting components is free.</p></dialog>
+  <dialog id="howDialog"><div class="dialog-head"><div><small>THE BASICS</small><h2>How to play</h2></div><button class="close-button" data-close="howDialog" aria-label="Close how to play">×</button></div><ol class="how-list"><li><b>Select</b> resistors that can be combined in one step.</li><li><b>Choose</b> Series for one current path, or Parallel for separate branches.</li><li><b>Repeat</b> until the circuit is simplified.</li></ol><p>Every submitted answer costs one turn. A hint also costs one turn. Selecting resistors and values is free.</p><button class="primary tutorial-start" id="tutorialStart">OK, show me</button></dialog>
   <dialog id="completeDialog" class="complete-dialog"><small>LEVEL COMPLETE</small><div class="stars" id="stars">★★★</div><h2 id="completeTitle">Circuit solved</h2><p id="completeText"></p><button class="primary" id="nextButton">Next level</button><button class="secondary" id="replayButton">Replay</button></dialog>
   <dialog id="chapterDialog" class="complete-dialog chapter-dialog"><small>CHAPTER COMPLETE</small><div class="chapter-bolt" aria-hidden="true">ϟ</div><h2>Congratulations!</h2><p>You solved every circuit and found its resistance, current and voltage values.</p><div class="chapter-stars" id="chapterStars"></div><button class="primary" id="startAgainButton">Start again</button><button class="secondary" id="reviewLevelsButton">Review levels</button></dialog>
-  <script type="module" src="./src/app.js?v=20261015-64"></script>
+  <script type="module" src="./src/app.js?v=20261016-65"></script>
 </body>
 </html>

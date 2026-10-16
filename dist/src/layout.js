@@ -10,9 +10,13 @@ export const CIRCUIT_FRAME=Object.freeze({
 
 export const COMPONENT_SIZE=Object.freeze({
   horizontal:Object.freeze({width:128,height:52}),
-  vertical:Object.freeze({width:68,height:130}),
+  vertical:Object.freeze({width:52,height:128}),
   valuePill:Object.freeze({width:96,height:23,gap:5})
 });
+
+export function componentSize(orientation='horizontal'){
+  return COMPONENT_SIZE[orientation==='vertical'?'vertical':'horizontal'];
+}
 
 const TEMPLATES=Object.freeze({
   sandwich:{A:[100,165],B:[250,165],C:[550,165],D:[700,165],R1:[175,165],R2:[400,75],R3:[400,255],R4:[625,165]},
@@ -41,7 +45,7 @@ export function validateCustomLayout(level){
   if(level.layout!=='custom')return [];
   const issues=[],safe=CIRCUIT_FRAME.safe;
   const boxes=level.graph.edges.map(edge=>{
-    const [x,y]=level.positions[edge.id],orientation=componentOrientation(level,edge),size=COMPONENT_SIZE[orientation];
+    const [x,y]=level.positions[edge.id],orientation=componentOrientation(level,edge),size=componentSize(orientation);
     return{id:edge.id,x,y,orientation,...size};
   });
   for(const box of boxes){

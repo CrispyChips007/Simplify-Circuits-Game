@@ -12,8 +12,9 @@ Circuit topology and electrical values live in `levels.js`. Visual geometry live
 
 ## Components
 
-- Mobile horizontal resistor: 128 × 52 units.
-- Mobile vertical resistor: 68 × 130 units.
+- Every playable resistor has one canonical 128 × 52-unit body at every viewport size.
+- A vertical resistor is that same body rotated geometrically: 52 × 128 units.
+- Renderers must read these dimensions from `COMPONENT_SIZE`; viewport-specific body dimensions are not permitted.
 - Minimum component-to-component gap: 8 units.
 - Minimum straight lead before a node or bend: 8 units at each resistor end.
 - Value pills occupy their own lane above, below, or beside a resistor and do not alter component geometry.

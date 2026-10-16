@@ -4,7 +4,7 @@ import { LEVELS } from '../dist/src/levels.js';
 import { loadProgress, saveResult } from '../dist/src/storage.js';
 import { isSolved, nearlyEqual, reduceGraph, solveCircuit, treeValues } from '../dist/src/solver.js';
 import { combineSupplies, levelSupply } from '../dist/src/supplies.js';
-import { CIRCUIT_FRAME, validateCustomLayout } from '../dist/src/layout.js';
+import { CIRCUIT_FRAME, COMPONENT_SIZE, componentSize, validateCustomLayout } from '../dist/src/layout.js';
 
 test('course contains sequential levels',()=>{
   assert.equal(LEVELS.length,33);
@@ -95,6 +95,14 @@ test('three-source battery arrays preserve the correct voltage and capacity rule
 test('custom layouts satisfy the mobile component and lead constraints',()=>{
   assert.ok(CIRCUIT_FRAME.lead>=8);
   for(const level of LEVELS.filter(level=>level.layout==='custom'))assert.deepEqual(validateCustomLayout(level),[],`${level.topology} violates the circuit frame`);
+});
+
+test('vertical resistors are exact rotations of horizontal resistors',()=>{
+  const horizontal=componentSize('horizontal'),vertical=componentSize('vertical');
+  assert.deepEqual(horizontal,COMPONENT_SIZE.horizontal);
+  assert.deepEqual(vertical,COMPONENT_SIZE.vertical);
+  assert.equal(vertical.width,horizontal.height);
+  assert.equal(vertical.height,horizontal.width);
 });
 
 test('late course applies current and voltage rules to mixed circuits',()=>{
