@@ -18,6 +18,19 @@ export function componentSize(orientation='horizontal'){
   return COMPONENT_SIZE[orientation==='vertical'?'vertical':'horizontal'];
 }
 
+export function graphIsSeriesPath(graph){
+  if(!graph?.edges.length)return false;
+  const adjacency=new Map(),degree=new Map();
+  graph.edges.forEach(edge=>{if(!adjacency.has(edge.a))adjacency.set(edge.a,new Set());if(!adjacency.has(edge.b))adjacency.set(edge.b,new Set());adjacency.get(edge.a).add(edge.b);adjacency.get(edge.b).add(edge.a);degree.set(edge.a,(degree.get(edge.a)||0)+1);degree.set(edge.b,(degree.get(edge.b)||0)+1)});
+  if(graph.edges.length>1){const degrees=[...degree.values()];if(degrees.filter(value=>value===1).length!==2||degrees.some(value=>value>2))return false}
+  const pending=[adjacency.keys().next().value],visited=new Set();while(pending.length){const node=pending.pop();if(visited.has(node))continue;visited.add(node);adjacency.get(node)?.forEach(next=>pending.push(next))}
+  return visited.size===adjacency.size;
+}
+
+export function graphIsParallelBank(graph){
+  return Boolean(graph?.edges.length>1&&graph.edges.every(edge=>[edge.a,edge.b].sort().join('|')===[graph.edges[0].a,graph.edges[0].b].sort().join('|')));
+}
+
 const TEMPLATES=Object.freeze({
   sandwich:{A:[100,165],B:[250,165],C:[550,165],D:[700,165],R1:[175,165],R2:[400,75],R3:[400,255],R4:[625,165]},
   'double-bank':{A:[100,165],B:[400,165],C:[700,165],R1:[250,75],R2:[250,255],R3:[550,75],R4:[550,255]},

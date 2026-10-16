@@ -4,11 +4,24 @@ import { LEVELS } from '../dist/src/levels.js';
 import { loadProgress, saveResult } from '../dist/src/storage.js';
 import { isSolved, nearlyEqual, reduceGraph, solveCircuit, treeValues } from '../dist/src/solver.js';
 import { combineSupplies, levelSupply } from '../dist/src/supplies.js';
-import { CIRCUIT_FRAME, COMPONENT_SIZE, componentSize, validateCustomLayout } from '../dist/src/layout.js';
+import { CIRCUIT_FRAME, COMPONENT_SIZE, componentSize, graphIsParallelBank, graphIsSeriesPath, validateCustomLayout } from '../dist/src/layout.js';
 
 test('course contains sequential levels',()=>{
-  assert.equal(LEVELS.length,33);
-  assert.deepEqual(LEVELS.map(level=>level.id),Array.from({length:33},(_,index)=>index+1));
+  assert.equal(LEVELS.length,31);
+  assert.deepEqual(LEVELS.map(level=>level.id),Array.from({length:LEVELS.length},(_,index)=>index+1));
+});
+
+test('shared topology rules apply independently of each level template',()=>{
+  for(const level of LEVELS){
+    const queue=[structuredClone(level.graph)],seen=new Set();
+    while(queue.length){
+      const graph=queue.shift(),key=graph.edges.map(edge=>`${edge.id}:${edge.a}-${edge.b}`).sort().join('|');if(seen.has(key))continue;seen.add(key);
+      const sameEndpoints=graph.edges.length>1&&graph.edges.every(edge=>[edge.a,edge.b].sort().join('|')===[graph.edges[0].a,graph.edges[0].b].sort().join('|'));
+      if(sameEndpoints){assert.equal(graphIsParallelBank(graph),true,`level ${level.id} parallel reduction`);assert.equal(graphIsSeriesPath(graph),false,`level ${level.id} parallel bank is not a series path`)}
+      if(graph.edges.length===1)assert.equal(graphIsSeriesPath(graph),true,`level ${level.id} final series path`);
+      const ids=graph.edges.map(edge=>edge.id);for(let mask=1;mask<(1<<ids.length);mask++){const result=reduceGraph(graph,ids.filter((_,index)=>mask&(1<<index)));if(result.ok)queue.push(result.graph)}
+    }
+  }
 });
 
 test('all-value levels follow current-only levels',()=>{
