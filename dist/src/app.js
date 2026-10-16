@@ -18,6 +18,9 @@ let levelIndex=Math.max(0,Math.min(initialUnlocked-1,LEVELS.length-1));
 let state;
 const TUTORIAL_KEY='circuit-fold-tutorial-v1';
 let tutorial={active:false,step:0,firstPlay:!localStorage.getItem(TUTORIAL_KEY)};
+const CURRENT_TUTORIAL_KEY='solve-it-current-tutorial-v1';
+const FIRST_CURRENT_LEVEL_ID=LEVELS.find(level=>level.mode==='complete')?.id;
+let currentTutorial={active:false,step:0,firstPlay:!localStorage.getItem(CURRENT_TUTORIAL_KEY)};
 
 const fmt=value=>Number.isInteger(value)?String(value):Number(value.toFixed(2)).toString();
 const mobileCircuit=()=>matchMedia('(max-width:540px)').matches;
@@ -205,10 +208,10 @@ function renderTrace(expanded=false){
 }
 
 function bindComponents(){
-  $('#circuit').querySelectorAll('.resistor').forEach(el=>{const toggle=()=>{if(state.level.preselect||state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();renderCircuit();renderSelection();syncTutorial()};el.addEventListener('click',toggle);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}})});
-  $('#circuit').querySelectorAll('.supply-component.selectable').forEach(supply=>{const toggle=()=>{if(state.solved)return;const id=supply.dataset.id;state.selected.has(id)?state.selected.delete(id):state.selected.add(id);state.hinted.clear();renderCircuit();renderSelection()};supply.addEventListener('click',toggle);supply.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
-  const totalCurrent=$('#circuit').querySelector('.current-component.selectable');if(totalCurrent){const toggle=()=>{state.selected.has('CURRENT')?state.selected.delete('CURRENT'):state.selected.add('CURRENT');renderCircuit();renderSelection()};totalCurrent.addEventListener('click',toggle);totalCurrent.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})}
-  $('#circuit').querySelectorAll('.resistor-current.selectable,.known-voltage.selectable').forEach(el=>{const toggle=()=>{if(state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();renderCircuit();renderSelection()};el.addEventListener('click',toggle);el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
+  $('#circuit').querySelectorAll('.resistor').forEach(el=>{const toggle=()=>{if(state.level.preselect||state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();setMessage('');renderCircuit();renderSelection();syncTutorial()};el.addEventListener('click',toggle);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}})});
+  $('#circuit').querySelectorAll('.supply-component.selectable').forEach(supply=>{const toggle=()=>{if(state.solved)return;const id=supply.dataset.id;state.selected.has(id)?state.selected.delete(id):state.selected.add(id);state.hinted.clear();setMessage('');renderCircuit();renderSelection();syncTutorial()};supply.addEventListener('click',toggle);supply.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
+  const totalCurrent=$('#circuit').querySelector('.current-component.selectable');if(totalCurrent){const toggle=()=>{state.selected.has('CURRENT')?state.selected.delete('CURRENT'):state.selected.add('CURRENT');setMessage('');renderCircuit();renderSelection();syncTutorial()};totalCurrent.addEventListener('click',toggle);totalCurrent.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})}
+  $('#circuit').querySelectorAll('.resistor-current.selectable,.known-voltage.selectable').forEach(el=>{const toggle=()=>{if(state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();setMessage('');renderCircuit();renderSelection();syncTutorial()};el.addEventListener('click',toggle);el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
 }
 
 function renderSelection(){const labels=[...state.selected].map(id=>{if(id==='SUPPLY')return `${supplyVoltage()} V supply`;if(id==='CURRENT')return `Iₜₒₜₐₗ = ${fmt(state.current)} A`;if(id.startsWith('SUPPLY:')){const item=state.level.supplies[Number(id.split(':')[1])];return `${item.voltage} V, ${item.capacity} Ah supply`}const [kind,edgeId]=id.split(':');const edge=state.graph?.edges.find(item=>item.id===(edgeId||id));if(kind==='CURRENT')return `I${subscriptNumber((edge?.label||'').replace(/^R/,''))} = ${fmt(state.values[edgeId].current)} A`;if(kind==='VOLTAGE')return `V${subscriptNumber((edge?.label||'').replace(/^R/,''))} = ${fmt(state.values[edgeId].voltage)} V`;return plainResistorLabel(edge?.label||id)});$('#selectionText').textContent=labels.length?labels.join(', '):'No component selected'}
@@ -223,12 +226,26 @@ function positionTutorialPointer(target){
 }
 
 function syncTutorial(){
-  if(!tutorial.active){positionTutorialPointer(null);return}
-  if(state.level.id!==1){tutorial.active=false;positionTutorialPointer(null);return}
-  tutorial.step=state.selected.has('R1')&&state.selected.has('R2')?2:state.selected.has('R1')?1:0;
-  const target=tutorial.step===0?$('#circuit [data-id="R1"]'):tutorial.step===1?$('#circuit [data-id="R2"]'):$('#actions [data-action="series"]');
-  setMessage(tutorial.step===0?'First, tap R₁.':tutorial.step===1?'Good. Now tap R₂.':'Both are selected. Choose Series.');
-  positionTutorialPointer(target);
+  if(tutorial.active){
+    if(state.level.id!==1){tutorial.active=false;positionTutorialPointer(null);return}
+    tutorial.step=state.selected.has('R1')&&state.selected.has('R2')?2:state.selected.has('R1')?1:0;
+    const target=tutorial.step===0?$('#circuit [data-id="R1"]'):tutorial.step===1?$('#circuit [data-id="R2"]'):$('#actions [data-action="series"]');
+    setMessage(tutorial.step===0?'First, tap R₁.':tutorial.step===1?'Good. Now tap R₂.':'Both are selected. Choose Series.');
+    positionTutorialPointer(target);return
+  }
+  if(currentTutorial.active){
+    if(state.level.id!==FIRST_CURRENT_LEVEL_ID){currentTutorial.active=false;positionTutorialPointer(null);return}
+    if(state.phase!=='total'){positionTutorialPointer(null);return}
+    const equivalent=state.graph.edges[0],resistanceSelected=state.selected.has(equivalent.id),supplySelected=state.selected.has('SUPPLY');
+    currentTutorial.step=resistanceSelected&&supplySelected?2:resistanceSelected?1:0;
+    const target=currentTutorial.step===0?$(`#circuit [data-id="${equivalent.id}"]`):currentTutorial.step===1?$('#circuit [data-id="SUPPLY"]'):$('#actions [data-action="current-divide"]');
+    setMessage(currentTutorial.step===0?'Tap the total resistance.':currentTutorial.step===1?'Now tap the supply voltage.':'Use I = V ÷ R to find the current.');
+    positionTutorialPointer(target);return
+  }
+  if(currentTutorial.firstPlay&&state.level.id===FIRST_CURRENT_LEVEL_ID&&state.phase==='total'){
+    currentTutorial.active=true;currentTutorial.firstPlay=false;localStorage.setItem(CURRENT_TUTORIAL_KEY,'started');syncTutorial();return
+  }
+  positionTutorialPointer(null);
 }
 
 function startTutorial(){
@@ -239,6 +256,7 @@ function startTutorial(){
 function finishTutorial(){
   tutorial.active=false;tutorial.firstPlay=false;localStorage.setItem(TUTORIAL_KEY,'complete');positionTutorialPointer(null);
 }
+function finishCurrentTutorial(){currentTutorial.active=false;localStorage.setItem(CURRENT_TUTORIAL_KEY,'complete');positionTutorialPointer(null)}
 function actions(){
   if(state.level.mode==='relation')return [['series','Series'],['parallel','Parallel']];
   if(state.phase==='supply')return [
@@ -300,7 +318,7 @@ function submit(action){
     if(action!=='current-divide'){reject('That rule cannot determine an available circuit value.');return}
     const selectedVoltage=state.selected.has('SUPPLY')||(state.known[equivalent.id]?.voltage&&state.selected.has(`VOLTAGE:${equivalent.id}`));
     if(!selectedVoltage){reject('Select the supply voltage or the voltage across the total resistance.');return}
-    state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();setMessage(`Iₜₒₜₐₗ = ${fmt(state.current)} A.`,'good');return
+    if(currentTutorial.active)finishCurrentTutorial();state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();setMessage(`Iₜₒₜₐₗ = ${fmt(state.current)} A.`,'good');return
   }
   if(calculationLevel&&state.phase==='expand'){
     const resistorIds=selectedResistorIds();
@@ -353,8 +371,8 @@ function submit(action){
   const result=reduceGraph(state.graph,resistorIds);
   if(!result.ok){reject(result.reason);return}
   if(tutorial.active&&tutorial.step===2&&action==='series')finishTutorial();
-  setMessage(explain(relation,action),'good');
-  animateToEquivalent(result.graph,result.edge.id,()=>{state.graph=result.graph;state.selected.clear();state.hinted.clear();if(isSolved(state.graph)&&calculationLevel){state.phase='total';render();setMessage('Resistors combined.','good')}else if(isSolved(state.graph)){render();complete()}else{render();setMessage('Resistors combined.','good')}});
+  setMessage('');
+  animateToEquivalent(result.graph,result.edge.id,()=>{state.graph=result.graph;state.selected.clear();state.hinted.clear();if(isSolved(state.graph)&&calculationLevel){state.phase='total';render()}else if(isSolved(state.graph)){render();complete()}else{render();setMessage('Resistors combined.','good')}});
 }
 
 function reject(text){setMessage(text,'error');$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}

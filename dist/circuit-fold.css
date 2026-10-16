@@ -42,19 +42,6 @@ body::before {
   overflow: hidden;
 }
 
-.game-card::after {
-  content: "";
-  position: absolute;
-  width: 52px;
-  height: 24px;
-  top: -1px;
-  right: 26px;
-  pointer-events: none;
-  opacity: .42;
-  border-right: 2px solid var(--fold-cyan);
-  border-bottom: 2px solid var(--fold-cyan);
-}
-
 .primary-action,
 .action-btn.primary {
   box-shadow: 0 7px 22px rgb(114 228 237 / 12%);
@@ -62,5 +49,4 @@ body::before {
 
 @media (max-width: 560px) {
   .brand { letter-spacing: .045em; }
-  .game-card::after { right: 14px; width: 34px; }
 }
