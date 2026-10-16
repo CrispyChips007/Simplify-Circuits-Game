@@ -7,6 +7,7 @@ import { componentSize } from './layout.js?v=20261016-62';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
+const TEST_ALL_LEVELS=true;
 const initialUnlocked=progress.unlocked;
 // TEMPORARY TESTING OVERRIDE — remove this entire block before public release.
 // It deliberately ignores saved progression so every level can be tested after an update.
@@ -220,9 +221,10 @@ function setMessage(text,type=''){const el=$('#message');el.textContent=text;el.
 function positionTutorialPointer(target){
   const pointer=$('#tutorialPointer');
   document.querySelectorAll('.tutorial-target').forEach(element=>element.classList.remove('tutorial-target'));
-  if(!target){pointer.hidden=true;return}
+  if(!target){pointer.hidden=true;pointer.classList.remove('sideways');return}
+  const sideways=target.classList.contains('supply-component');pointer.classList.toggle('sideways',sideways);
   target.classList.add('tutorial-target');pointer.hidden=false;
-  requestAnimationFrame(()=>{const targetBox=target.getBoundingClientRect(),cardBox=$('#gameCard').getBoundingClientRect();pointer.style.left=`${targetBox.left-cardBox.left+targetBox.width/2}px`;pointer.style.top=`${targetBox.top-cardBox.top-4}px`});
+  requestAnimationFrame(()=>{const targetBox=target.getBoundingClientRect(),cardBox=$('#gameCard').getBoundingClientRect();pointer.style.left=`${targetBox.left-cardBox.left+(sideways?-4:targetBox.width/2)}px`;pointer.style.top=`${targetBox.top-cardBox.top+(sideways?targetBox.height/2:-4)}px`});
 }
 
 function syncTutorial(){
@@ -235,12 +237,21 @@ function syncTutorial(){
   }
   if(currentTutorial.active){
     if(state.level.id!==FIRST_CURRENT_LEVEL_ID){currentTutorial.active=false;positionTutorialPointer(null);return}
-    if(state.phase!=='total'){positionTutorialPointer(null);return}
-    const equivalent=state.graph.edges[0],resistanceSelected=state.selected.has(equivalent.id),supplySelected=state.selected.has('SUPPLY');
-    currentTutorial.step=resistanceSelected&&supplySelected?2:resistanceSelected?1:0;
-    const target=currentTutorial.step===0?$(`#circuit [data-id="${equivalent.id}"]`):currentTutorial.step===1?$('#circuit [data-id="SUPPLY"]'):$('#actions [data-action="current-divide"]');
-    setMessage(currentTutorial.step===0?'Tap the total resistance.':currentTutorial.step===1?'Now tap the supply voltage.':'Use I = V ÷ R to find the current.');
-    positionTutorialPointer(target);return
+    if(state.phase==='total'){
+      const equivalent=state.graph.edges[0],resistanceSelected=state.selected.has(equivalent.id),supplySelected=state.selected.has('SUPPLY');
+      currentTutorial.step=resistanceSelected&&supplySelected?2:resistanceSelected?1:0;
+      const target=currentTutorial.step===0?$(`#circuit [data-id="${equivalent.id}"]`):currentTutorial.step===1?$('#circuit [data-id="SUPPLY"]'):$('#actions [data-action="current-divide"]');
+      setMessage(currentTutorial.step===0?'Tap the total resistance.':currentTutorial.step===1?'Now tap the supply voltage.':'Use I = V ÷ R to find the current.');
+      positionTutorialPointer(target);return
+    }
+    if(state.phase==='expand'){
+      const equivalent=state.graph.edges[0],currentSelected=state.selected.has('CURRENT'),resistanceSelected=state.selected.has(equivalent.id);
+      currentTutorial.step=currentSelected&&resistanceSelected?5:currentSelected?4:3;
+      const target=currentTutorial.step===3?$('#circuit [data-id="CURRENT"]'):currentTutorial.step===4?$(`#circuit [data-id="${equivalent.id}"]`):$('#actions [data-action="same-current"]');
+      setMessage(currentTutorial.step===3?'Tap Iₜₒₜₐₗ.':currentTutorial.step===4?'Now tap the total resistance.':'Apply Iₜₒₜₐₗ to the series resistors.');
+      positionTutorialPointer(target);return
+    }
+    positionTutorialPointer(null);return
   }
   if(currentTutorial.firstPlay&&state.level.id===FIRST_CURRENT_LEVEL_ID&&state.phase==='total'){
     currentTutorial.active=true;currentTutorial.firstPlay=false;localStorage.setItem(CURRENT_TUTORIAL_KEY,'started');syncTutorial();return
@@ -318,7 +329,7 @@ function submit(action){
     if(action!=='current-divide'){reject('That rule cannot determine an available circuit value.');return}
     const selectedVoltage=state.selected.has('SUPPLY')||(state.known[equivalent.id]?.voltage&&state.selected.has(`VOLTAGE:${equivalent.id}`));
     if(!selectedVoltage){reject('Select the supply voltage or the voltage across the total resistance.');return}
-    if(currentTutorial.active)finishCurrentTutorial();state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();setMessage(`Iₜₒₜₐₗ = ${fmt(state.current)} A.`,'good');return
+    state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();if(!currentTutorial.active)setMessage(`Iₜₒₜₐₗ = ${fmt(state.current)} A.`,'good');return
   }
   if(calculationLevel&&state.phase==='expand'){
     const resistorIds=selectedResistorIds();
@@ -327,7 +338,7 @@ function submit(action){
       const ownValue=resistor&&(state.selected.has(`${prefix}${resistor.id}`)||(property==='current'&&state.graph.edges.length===1&&state.selected.has('CURRENT')));
       if(resistor?.history&&ownValue){
         if(resistor.history.type!==(property==='current'?'series':'parallel')){reject('That rule does not match how these resistors were combined.');return}
-        const result=expandEdge(state.graph,resistor.id);state.graph=result.graph;delete state.known[resistor.id];
+        if(currentTutorial.active&&action==='same-current')finishCurrentTutorial();const result=expandEdge(state.graph,resistor.id);state.graph=result.graph;delete state.known[resistor.id];
         result.graph.edges.filter(edge=>resistor.history.children.some(child=>child.id===edge.id)).forEach(edge=>{state.known[edge.id]={[property]:true}});
         state.selected.clear();if(finishCalculationIfReady())return;render();setMessage('Valid rule.','good');return
       }
@@ -420,7 +431,7 @@ function loadLevel(index){
 }
 
 function renderLevels(){
-  $('#levelGrid').innerHTML=LEVELS.map((level,index)=>{const unlocked=level.id<=progress.unlocked,stars=progress.stars[level.id]||0;return `<button class="level-tile" data-level="${index}" ${unlocked?'':'disabled'}><span class="number">LEVEL ${level.id}</span><b>Circuit ${level.id}</b>${unlocked?`<span class="tile-stars">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</span>`:'<span class="lock">▣</span>'}</button>`}).join('');
+  $('#levelGrid').innerHTML=LEVELS.map((level,index)=>{const unlocked=TEST_ALL_LEVELS||level.id<=progress.unlocked,stars=progress.stars[level.id]||0;return `<button class="level-tile" data-level="${index}" ${unlocked?'':'disabled'}><span class="number">LEVEL ${level.id}</span><b>Circuit ${level.id}</b>${unlocked?`<span class="tile-stars">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</span>`:'<span class="lock">▣</span>'}</button>`}).join('');
   $('#levelGrid').querySelectorAll('[data-level]:not(:disabled)').forEach(button=>button.addEventListener('click',()=>{$('#levelsDialog').close();loadLevel(Number(button.dataset.level))}))
 }
 
