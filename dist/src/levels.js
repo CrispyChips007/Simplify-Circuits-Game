@@ -60,7 +60,7 @@ const LEVELS_SOURCE = [
 
 // Teaching order: identify connections, apply formulas, solve currents, then solve all values.
 // The second near-identical series-identification question is deliberately omitted.
-const COURSE_ORDER=[1,3,4,25,26,13,5,6,17,18,7,27,20,35,28,19,30,29,8,9,31,36,32,11,37,40,38,39,41,33,42,43,34];
+const COURSE_ORDER=[1,3,4,25,26,13,5,6,7,27,20,35,28,19,30,29,8,9,31,36,32,11,37,40,38,39,41,33,42,43,34];
 export const LEVELS=COURSE_ORDER.map((sourceId,index)=>{
   const source=LEVELS_SOURCE.find(level=>level.id===sourceId);
   const mode=source.mode;

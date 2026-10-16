@@ -224,7 +224,7 @@ function positionTutorialPointer(target){
   if(!target){pointer.hidden=true;pointer.classList.remove('sideways');return}
   const sideways=target.classList.contains('supply-component');pointer.classList.toggle('sideways',sideways);
   target.classList.add('tutorial-target');pointer.hidden=false;
-  requestAnimationFrame(()=>{const targetBox=target.getBoundingClientRect(),cardBox=$('#gameCard').getBoundingClientRect();pointer.style.left=`${targetBox.left-cardBox.left+(sideways?-4:targetBox.width/2)}px`;pointer.style.top=`${targetBox.top-cardBox.top+(sideways?targetBox.height/2:-4)}px`});
+  requestAnimationFrame(()=>{const targetBox=target.getBoundingClientRect(),cardBox=$('#gameCard').getBoundingClientRect();pointer.style.left=`${targetBox.left-cardBox.left+(sideways?targetBox.width+4:targetBox.width/2)}px`;pointer.style.top=`${targetBox.top-cardBox.top+(sideways?targetBox.height/2:-4)}px`});
 }
 
 function syncTutorial(){
@@ -431,7 +431,7 @@ function loadLevel(index){
 }
 
 function renderLevels(){
-  $('#levelGrid').innerHTML=LEVELS.map((level,index)=>{const unlocked=TEST_ALL_LEVELS||level.id<=progress.unlocked,stars=progress.stars[level.id]||0;return `<button class="level-tile" data-level="${index}" ${unlocked?'':'disabled'}><span class="number">LEVEL ${level.id}</span><b>Circuit ${level.id}</b>${unlocked?`<span class="tile-stars">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</span>`:'<span class="lock">▣</span>'}</button>`}).join('');
+  $('#levelGrid').innerHTML=LEVELS.map((level,index)=>{const unlocked=TEST_ALL_LEVELS||level.id<=progress.unlocked,stars=progress.stars[level.id]||0;return `<button class="level-tile" data-level="${index}" ${unlocked?'':'disabled'}><span class="number">LEVEL ${level.id}</span>${unlocked?`<span class="tile-stars">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</span>`:'<span class="lock">▣</span>'}</button>`}).join('');
   $('#levelGrid').querySelectorAll('[data-level]:not(:disabled)').forEach(button=>button.addEventListener('click',()=>{$('#levelsDialog').close();loadLevel(Number(button.dataset.level))}))
 }
 
