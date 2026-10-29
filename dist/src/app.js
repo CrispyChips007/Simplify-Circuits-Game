@@ -88,7 +88,7 @@ function viewportForLayout(layout){return{x:layout.colOffset*100,y:layout.rowOff
 function applyViewport(circuit,viewport){circuit.setAttribute('viewBox',`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`);circuit.style.aspectRatio=`${viewport.width}/${viewport.height}`}
 
 function renderCircuit(circuit=$('#circuit'),interactive=true){
-  const layout=interactive&&state.gridLayout?state.gridLayout:buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),viewport=state.gridViewport||viewportForLayout(layout);if(interactive){state.gridLayout=layout;state.gridViewport=viewport}
+  const layout=interactive&&state.gridLayout?state.gridLayout:buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),viewport=interactive?(state.gridViewport||viewportForLayout(layout)):viewportForLayout(layout);if(interactive){state.gridLayout=layout;state.gridViewport=viewport}
   applyViewport(circuit,viewport);
   circuit.innerHTML=gridWireMarkup(layout)+state.graph.edges.map(edge=>gridResistorMarkup(edge,layout.components.get(edge.id))).join('')+gridSupplyMarkup(layout.components.get('SUPPLY'));
   if(interactive){renderKnownValues();bindComponents()}
@@ -188,7 +188,7 @@ function render(){
 }
 
 function applyResponsiveViewBoxes(){
-  const viewport=state.gridViewport||viewportForLayout(state.gridLayout);applyViewport($('#circuit'),viewport);applyViewport($('#referenceCircuit'),viewport);
+  const viewport=state.gridViewport||viewportForLayout(state.gridLayout);applyViewport($('#circuit'),viewport);
 }
 
 function explain(relation,chosen){
