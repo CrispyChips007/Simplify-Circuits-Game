@@ -211,12 +211,25 @@ function directionsFor(layout){
   return directions;
 }
 
+function applyPlacementHints(layout,hints){
+  const occupied=new Map([...layout.components.values()].map(item=>[cellKey(item.col,item.row),item.id]));
+  const exactPorts=(col,row,orientation)=>{const ports=layout.directions.get(cellKey(col,row)),expected=orientation==='vertical'?['N','S']:['E','W'];return ports?.size===2&&expected.every(port=>ports.has(port))};
+  for(const component of layout.components.values()){
+    const hint=hints.get(component.id);if(!hint||component.type!=='resistor'||hint.orientation!==component.orientation)continue;
+    const candidates=[{col:component.col,row:component.row}],steps=component.orientation==='vertical'?[[0,-1],[0,1]]:[[-1,0],[1,0]];
+    for(const [dc,dr] of steps){let col=component.col+dc,row=component.row+dr;while(col>=0&&col<layout.cols&&row>=0&&row<layout.rows&&exactPorts(col,row,component.orientation)){const key=cellKey(col,row),other=occupied.get(key);if(other&&other!==component.id)break;candidates.push({col,row});col+=dc;row+=dr}}
+    candidates.sort((a,b)=>(Math.abs(a.col-hint.col)+Math.abs(a.row-hint.row))-(Math.abs(b.col-hint.col)+Math.abs(b.row-hint.row))||Math.abs(a.col-component.col)+Math.abs(a.row-component.row)-Math.abs(b.col-component.col)-Math.abs(b.row-component.row));
+    const target=candidates[0];if(target.col===component.col&&target.row===component.row)continue;
+    occupied.delete(cellKey(component.col,component.row));component.col=target.col;component.row=target.row;occupied.set(cellKey(component.col,component.row),component.id);
+  }
+}
+
 export function buildGridLayout(graph,{source=graph.source??graph.nodes[0],sink=graph.sink??graph.nodes.at(-1),hints=new Map()}={}){
   const series=graph.edges.length===1||(()=>{const degree=new Map();graph.edges.forEach(edge=>{degree.set(edge.a,(degree.get(edge.a)||0)+1);degree.set(edge.b,(degree.get(edge.b)||0)+1)});return[...degree.values()].filter(value=>value===1).length===2&&[...degree.values()].every(value=>value<=2)})();
   const local=series?buildSeriesRing(graph,source,sink,hints):isParallelBank(graph)?buildParallelBank(graph,hints):buildBranchedLayout(graph,source,sink);
   const colOffset=Math.floor((GRID_COLS-local.width)/2),rowOffset=Math.floor((GRID_ROWS-local.height)/2);
   const layout={cols:GRID_COLS,rows:GRID_ROWS,width:local.width,height:local.height,colOffset,rowOffset,components:new Map(),connections:new Set()};
-  mergeInto(layout,local,colOffset,rowOffset);layout.directions=directionsFor(layout);
+  mergeInto(layout,local,colOffset,rowOffset);layout.directions=directionsFor(layout);applyPlacementHints(layout,hints);
   layout.wires=[...layout.directions].filter(([key])=>![...layout.components.values()].some(item=>cellKey(item.col,item.row)===key)).map(([key,ports])=>{const [col,row]=parseCell(key);return{col,row,ports:[...ports].sort().join('')}});
   return layout;
 }

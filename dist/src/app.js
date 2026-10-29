@@ -1,9 +1,10 @@
 import { LEVELS } from './levels.js?v=20261029-1';
-import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGraph, treeValues } from './solver.js?v=20261029-1';
+import { cloneGraph, expandEdge, isSolved, relationship, reduceGraph, treeValues } from './solver.js?v=20261029-1';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-7';
+import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-8';
+import { currentToken, rotateActions, spansSupply, transferPlan } from './interactions.js?v=20261029-1';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
@@ -47,7 +48,7 @@ function circuitPosition(graph,edgeId){
 }
 
 function gridValueMarkup({placement,id,text,type,selectable}){
-  const vertical=placement.orientation==='vertical',selected=state.selected.has(id),originX=placement.col*100,originY=placement.row*100,isCurrent=type==='current',className=isCurrent?(id==='CURRENT'?'current-component':'resistor-current'):'known-voltage',hitbox=isCurrent?'current-hitbox':'voltage-hitbox',textClass=isCurrent?'circuit-value':'voltage-value';
+  const vertical=placement.orientation==='vertical',selected=state.selected.has(id),originX=placement.col*100,originY=placement.row*100,isCurrent=type==='current',className=isCurrent?'resistor-current':'known-voltage',hitbox=isCurrent?'current-hitbox':'voltage-hitbox',textClass=isCurrent?'circuit-value':'voltage-value';
   const transform=vertical?`translate(${originX+(isCurrent?10:90)} ${originY+50}) rotate(-90)`:`translate(${originX+50} ${originY+(isCurrent?11:89)})`;
   return `<g class="${className} grid-component-value${vertical?' vertical-value':''}${selectable?' selectable':''}${selected?' selected':''}" data-id="${id}" tabindex="0" role="button" transform="${transform}"><rect class="${hitbox}" x="-42" y="-9" width="84" height="18" rx="9"/><text class="value-pill-text ${textClass}" x="0" y="4">${text}</text></g>`;
 }
@@ -56,7 +57,7 @@ function renderKnownValues(){
   if(!['complete','voltage'].includes(state.level.mode)||!['total','expand','restored'].includes(state.phase))return;
   const labels=state.graph.edges.flatMap(edge=>{
     const known=state.known[edge.id]||{},value=state.values[edge.id],placement=state.gridLayout?.components.get(edge.id),rawNumber=(edge.label||edge.id).replace(/^R/,''),grouped=/[,–]/.test(rawNumber),number=rawNumber.replace(/,/g,'‚'),selectable=!state.solved,items=[];if(!placement||!value)return items;
-    if(known.current){const root=state.graph.edges.length===1,id=root?'CURRENT':`CURRENT:${edge.id}`,name=root?'I<tspan class="subscript" baseline-shift="sub">Total</tspan>':grouped?'I':`I${subscriptNumber(number)}`;items.push(gridValueMarkup({placement,id,text:`${name} = ${fmt(value.current)} A`,type:'current',selectable}))}
+    if(known.current){const root=state.graph.edges.length===1,id=currentToken(edge.id),name=root?'I<tspan class="subscript" baseline-shift="sub">Total</tspan>':grouped?'I':`I${subscriptNumber(number)}`;items.push(gridValueMarkup({placement,id,text:`${name} = ${fmt(value.current)} A`,type:'current',selectable}))}
     if(known.voltage){const id=`VOLTAGE:${edge.id}`,name=grouped?'V':`V${subscriptNumber(number)}`;items.push(gridValueMarkup({placement,id,text:`${name} = ${fmt(value.voltage)} V`,type:'voltage',selectable}))}
     return items;
   }).join('');
@@ -94,13 +95,12 @@ function renderCircuit(circuit=$('#circuit'),interactive=true){
 }
 
 function bindComponents(){
-  $('#circuit').querySelectorAll('.resistor').forEach(el=>{const toggle=()=>{if(state.level.preselect||state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();setMessage('');renderCircuit();renderSelection();syncTutorial()};el.addEventListener('click',toggle);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}})});
-  $('#circuit').querySelectorAll('.supply-component.selectable').forEach(supply=>{const toggle=()=>{if(state.solved)return;const id=supply.dataset.id;state.selected.has(id)?state.selected.delete(id):state.selected.add(id);state.hinted.clear();setMessage('');renderCircuit();renderSelection();syncTutorial()};supply.addEventListener('click',toggle);supply.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
-  const totalCurrent=$('#circuit').querySelector('.current-component.selectable');if(totalCurrent){const toggle=()=>{state.selected.has('CURRENT')?state.selected.delete('CURRENT'):state.selected.add('CURRENT');setMessage('');renderCircuit();renderSelection();syncTutorial()};totalCurrent.addEventListener('click',toggle);totalCurrent.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})}
-  $('#circuit').querySelectorAll('.resistor-current.selectable,.known-voltage.selectable').forEach(el=>{const toggle=()=>{if(state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();setMessage('');renderCircuit();renderSelection();syncTutorial()};el.addEventListener('click',toggle);el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
+  $('#circuit').querySelectorAll('.resistor').forEach(el=>{const toggle=()=>{if(state.level.preselect||state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();clearFormulaPrompt();setMessage('');renderCircuit();renderSelection();syncTutorial()};el.addEventListener('click',toggle);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}})});
+  $('#circuit').querySelectorAll('.supply-component.selectable').forEach(supply=>{const toggle=()=>{if(state.solved)return;const id=supply.dataset.id;state.selected.has(id)?state.selected.delete(id):state.selected.add(id);state.hinted.clear();clearFormulaPrompt();setMessage('');renderCircuit();renderSelection();syncTutorial()};supply.addEventListener('click',toggle);supply.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
+  $('#circuit').querySelectorAll('.resistor-current.selectable,.known-voltage.selectable').forEach(el=>{const toggle=()=>{if(state.solved)return;state.selected.has(el.dataset.id)?state.selected.delete(el.dataset.id):state.selected.add(el.dataset.id);state.hinted.clear();clearFormulaPrompt();setMessage('');renderCircuit();renderSelection();syncTutorial()};el.addEventListener('click',toggle);el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle()}})});
 }
 
-function renderSelection(){const labels=[...state.selected].map(id=>{if(id==='SUPPLY')return `${supplyVoltage()} V supply`;if(id==='CURRENT')return `Iₜₒₜₐₗ = ${fmt(state.current)} A`;if(id.startsWith('SUPPLY:')){const item=state.level.supplies[Number(id.split(':')[1])];return `${item.voltage} V, ${item.capacity} Ah supply`}const [kind,edgeId]=id.split(':');const edge=state.graph?.edges.find(item=>item.id===(edgeId||id));if(kind==='CURRENT')return `I${subscriptNumber((edge?.label||'').replace(/^R/,''))} = ${fmt(state.values[edgeId].current)} A`;if(kind==='VOLTAGE')return `V${subscriptNumber((edge?.label||'').replace(/^R/,''))} = ${fmt(state.values[edgeId].voltage)} V`;return plainResistorLabel(edge?.label||id)});$('#selectionText').textContent=labels.length?labels.join(', '):'No component selected'}
+function renderSelection(){const labels=[...state.selected].map(id=>{if(id==='SUPPLY')return `${supplyVoltage()} V supply`;if(id.startsWith('SUPPLY:')){const item=state.level.supplies[Number(id.split(':')[1])];return `${item.voltage} V, ${item.capacity} Ah supply`}const [kind,edgeId]=id.split(':');const edge=state.graph?.edges.find(item=>item.id===(edgeId||id));if(kind==='CURRENT')return `${state.graph.edges.length===1?'Iₜₒₜₐₗ':`I${subscriptNumber((edge?.label||'').replace(/^R/,''))}`} = ${fmt(state.values[edgeId].current)} A`;if(kind==='VOLTAGE')return `V${subscriptNumber((edge?.label||'').replace(/^R/,''))} = ${fmt(state.values[edgeId].voltage)} V`;return plainResistorLabel(edge?.label||id)});$('#selectionText').textContent=labels.length?labels.join(', '):'No component selected'}
 function setMessage(text,type=''){const el=$('#message');el.textContent=text;el.className=`selection-feedback ${type}`}
 
 function positionTutorialPointer(target){
@@ -130,10 +130,10 @@ function syncTutorial(){
       positionTutorialPointer(target);return
     }
     if(state.phase==='expand'){
-      const equivalent=state.graph.edges[0],currentSelected=state.selected.has('CURRENT'),resistanceSelected=state.selected.has(equivalent.id);
-      currentTutorial.step=currentSelected&&resistanceSelected?5:currentSelected?4:3;
-      const target=currentTutorial.step===3?$('#circuit [data-id="CURRENT"]'):currentTutorial.step===4?$(`#circuit [data-id="${equivalent.id}"]`):$('#actions [data-action="same-current"]');
-      setMessage(currentTutorial.step===3?'Tap Iₜₒₜₐₗ.':currentTutorial.step===4?'Now tap the total resistance.':'Apply Iₜₒₜₐₗ to the series resistors.');
+      const equivalent=state.graph.edges[0],id=currentToken(equivalent.id),currentSelected=state.selected.has(id);
+      currentTutorial.step=currentSelected?4:3;
+      const target=currentTutorial.step===3?$(`#circuit [data-id="${id}"]`):$('#actions [data-action="same-current"]');
+      setMessage(currentTutorial.step===3?'Tap Iₜₒₜₐₗ.':'Apply Iₜₒₜₐₗ to the series resistors.');
       positionTutorialPointer(target);return
     }
     positionTutorialPointer(null);return
@@ -155,27 +155,35 @@ function finishTutorial(){
 function finishCurrentTutorial(){currentTutorial.active=false;localStorage.setItem(CURRENT_TUTORIAL_KEY,'complete');positionTutorialPointer(null)}
 function actions(){
   if(state.level.mode==='relation')return [['series','Series'],['parallel','Parallel']];
-  if(state.phase==='supply')return [
+  if(state.phase==='supply')return rotateActions([
     ['supply-series','VTotal = V1 + V2 + ⋯'],['supply-parallel','VTotal = V1 = V2 = ⋯'],
     ['current-divide','ITotal = VTotal ÷ RTotal'],['voltage-multiply','V = I × R'],
     ['same-current','Current is the same in series'],['same-voltage','Voltage is the same in parallel']
-  ];
-  return [
+  ],state.turns);
+  return rotateActions([
     ['series','<math aria-label="R total equals R one plus R two"><msub><mi>R</mi><mtext>Total</mtext></msub><mo>=</mo><msub><mi>R</mi><mn>1</mn></msub><mo>+</mo><msub><mi>R</mi><mn>2</mn></msub><mo>+</mo><mo>⋯</mo></math>'],
     ['parallel','<math aria-label="one over R total equals one over R one plus one over R two"><mfrac><mn>1</mn><msub><mi>R</mi><mtext>Total</mtext></msub></mfrac><mo>=</mo><mfrac><mn>1</mn><msub><mi>R</mi><mn>1</mn></msub></mfrac><mo>+</mo><mfrac><mn>1</mn><msub><mi>R</mi><mn>2</mn></msub></mfrac><mo>+</mo><mo>⋯</mo></math>'],
     ['current-divide','<math aria-label="I equals V divided by R"><mi>I</mi><mo>=</mo><mfrac><mi>V</mi><mi>R</mi></mfrac></math>'],
     ['voltage-multiply','<math aria-label="V equals I times R"><mi>V</mi><mo>=</mo><mi>I</mi><mo>×</mo><mi>R</mi></math>'],
     ['same-current','Current is the same in series'],
     ['same-voltage','Voltage is the same in parallel']
-  ];
+  ],state.turns);
+}
+
+function clearFormulaPrompt(){const prompt=$('#formulaPrompt');prompt.hidden=true;prompt.innerHTML=''}
+function showFormulaPrompt(action,kind){const button=$(`#actions [data-action="${action}"]`),prompt=$('#formulaPrompt'),word=kind==='resistance'?'resistance':kind;prompt.innerHTML=`<div class="formula-prompt-copy">${button?.innerHTML||''}</div><p>Select a <mark>${word}</mark>.</p>`;prompt.hidden=false}
+
+function renderActions(){
+  $('#actions').className=`actions${state.level.mode!=='relation'?' formula-bank':''}`;
+  $('#actions').innerHTML=actions().map(([id,label])=>`<button class="action${label.includes('<math')?' formula':''}${['same-current','same-voltage'].includes(id)?' transfer-rule':''}" data-action="${id}">${label}</button>`).join('');
+  $('#actions').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{submit(button.dataset.action);button.blur()}));
 }
 
 function render(){
   const level=state.level;
   $('#levelNumber').textContent=`LEVEL ${level.id}`;$('#turnCount').textContent=state.turns;$('#promptTitle').textContent=level.title;
-  $('#actions').className=`actions${level.mode!=='relation'?' formula-bank':''}`;
-  $('#actions').innerHTML=actions().map(([id,label])=>`<button class="action${label.includes('<math')?' formula':''}" data-action="${id}">${label}</button>`).join('');
-  $('#actions').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{submit(button.dataset.action);button.blur()}));
+  $('#gameCard').classList.toggle('mode-calculation',['complete','voltage'].includes(level.mode));$('#gameCard').classList.remove('phase-supply','phase-simplify','phase-total','phase-expand','phase-restored');if(state.phase)$('#gameCard').classList.add(`phase-${state.phase}`);
+  renderActions();
   renderOriginal();renderCircuit();renderSelection();applyResponsiveViewBoxes();syncTutorial();
 }
 
@@ -190,76 +198,71 @@ function explain(relation,chosen){
 }
 
 function selectedResistorIds(){const edgeIds=new Set(state.graph.edges.map(edge=>edge.id));return [...state.selected].filter(id=>edgeIds.has(id))}
+function countTurn(){state.turns++;$('#turnCount').textContent=state.turns}
+function incomplete(action,kind,message=`Select a ${kind}.`){showFormulaPrompt(action,kind);setMessage(message);return false}
 
 function submit(action){
-  if(state.solved)return;state.turns++;$('#turnCount').textContent=state.turns;
+  if(state.solved)return;clearFormulaPrompt();
   const calculationLevel=['complete','voltage'].includes(state.level.mode);
   if(state.phase==='supply'){
     const expected=`supply-${state.level.supplyConnection}`,selected=[...state.selected].filter(id=>id.startsWith('SUPPLY:'));
-    if(selected.length!==state.level.supplies.length){reject('Select all supplies in the bank.');return}
+    if(selected.length!==state.level.supplies.length){incomplete(action,'supply','Select all supplies in the bank.');return}
     if(action!==expected){reject('That rule does not match how these supplies are connected.');return}
-    state.phase='simplify';state.selected.clear();render();setMessage('Supply bank combined.','good');return
+    countTurn();state.phase='simplify';state.selected.clear();render();setMessage('Supply bank combined.','good');return
   }
-  if(state.level.mode==='formula'&&!['series','parallel'].includes(action)){reject('That rule cannot combine the selected resistors.');return}
-  if(calculationLevel&&state.phase==='simplify'&&!['series','parallel'].includes(action)){reject('That rule cannot be applied to the selected values.');return}
+  if(state.level.mode==='formula'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,action==='voltage-multiply'?'current':'voltage');else reject('That rule cannot combine the selected resistors.');return}
+  if(calculationLevel&&state.phase==='simplify'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,action==='voltage-multiply'?'current':'voltage');else reject('That rule cannot be applied to the selected values.');return}
   if(calculationLevel&&state.phase==='total'){
     const equivalent=state.graph.edges[0];
-    if(!state.selected.has(equivalent.id)){reject('No resistance selected.');return}
     if(action==='same-voltage'){
-      if(!state.selected.has('SUPPLY')){reject('Select the supply voltage.');return}
-      state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:false,voltage:true}};state.selected.clear();render();setMessage('Supply voltage applied to the total resistance.','good');return
+      if(!state.selected.has('SUPPLY')){incomplete(action,'voltage');return}
+      countTurn();state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:false,voltage:true}};state.selected.clear();render();setMessage('Supply voltage applied to the total resistance.','good');return
     }
+    if(!state.selected.has(equivalent.id)){incomplete(action,'resistance');return}
     if(action!=='current-divide'){reject('That rule cannot determine an available circuit value.');return}
     const selectedVoltage=state.selected.has('SUPPLY')||(state.known[equivalent.id]?.voltage&&state.selected.has(`VOLTAGE:${equivalent.id}`));
-    if(!selectedVoltage){reject('Select the supply voltage or the voltage across the total resistance.');return}
-    state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();if(!currentTutorial.active)setMessage(`Iₜₒₜₐₗ = ${fmt(state.current)} A.`,'good');return
+    if(!selectedVoltage){incomplete(action,'voltage');return}
+    countTurn();state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();if(!currentTutorial.active)setMessage(`Iₜₒₜₐₗ = ${fmt(state.current)} A.`,'good');return
   }
   if(calculationLevel&&state.phase==='expand'){
     const resistorIds=selectedResistorIds();
-    if(['same-current','same-voltage'].includes(action)&&resistorIds.length){
-      const property=action==='same-current'?'current':'voltage',prefix=property==='current'?'CURRENT:':'VOLTAGE:',resistor=resistorIds.length===1?state.graph.edges.find(edge=>edge.id===resistorIds[0]):null;
-      const ownValue=resistor&&(state.selected.has(`${prefix}${resistor.id}`)||(property==='current'&&state.graph.edges.length===1&&state.selected.has('CURRENT')));
-      if(resistor?.history&&ownValue){
-        if(resistor.history.type!==(property==='current'?'series':'parallel')){reject('That rule does not match how these resistors were combined.');return}
-        if(currentTutorial.active&&action==='same-current')finishCurrentTutorial();const result=expandEdge(state.graph,resistor.id);state.layoutHints.delete(resistor.id);state.graph=result.graph;delete state.known[resistor.id];
-        result.graph.edges.filter(edge=>resistor.history.children.some(child=>child.id===edge.id)).forEach(edge=>{state.known[edge.id]={[property]:true}});
-        state.selected.clear();if(finishCalculationIfReady())return;render();setMessage('Valid rule.','good');return
-      }
-      const selectedTokens=[...state.selected].filter(id=>id.startsWith(prefix)),special=property==='voltage'&&state.selected.has('SUPPLY')?'SUPPLY':property==='current'&&state.selected.has('CURRENT')?'CURRENT':null;
-      if(selectedTokens.length+(special?1:0)!==1){reject(`Select one known ${property} value.`);return}
-      const sourceId=selectedTokens[0]?.slice(prefix.length),sourceValue=special==='SUPPLY'?supplyVoltage():special==='CURRENT'?state.current:state.values[sourceId]?.[property];
-      const targets=resistorIds.filter(id=>id!==sourceId);
-      if(!targets.length){reject(`Select a resistance to receive the ${property} value.`);return}
-      if(property==='voltage'){
-        const endpointKey=edge=>[edge.a,edge.b].sort().join('|'),sourceKey=special==='SUPPLY'?[state.level.graph.nodes[0],state.level.graph.nodes[state.level.graph.nodes.length-1]].sort().join('|'):endpointKey(state.graph.edges.find(edge=>edge.id===sourceId));
-      if(targets.some(id=>endpointKey(state.graph.edges.find(edge=>edge.id===id))!==sourceKey)){reject('These resistors do not sit on separate branches.');return}
-      }
-      if(property==='current'&&sourceId){const relation=relationship(state.graph,[sourceId,...targets]);if(relation?.type!=='series'){reject('Those resistors are not on one current path.');return}}
-      if(sourceValue===null||sourceValue===undefined||targets.some(id=>!nearlyEqual(state.values[id]?.[property],sourceValue))){reject(`Those resistors do not have the same ${property}.`);return}
-      targets.forEach(id=>{state.known[id]={...(state.known[id]||{}),[property]:true}});state.selected.clear();
-      if(finishCalculationIfReady())return;render();setMessage(`${property==='current'?'Current':'Voltage'} copied to the selected resistor${targets.length===1?'':'s'}.`,'good');return
+    if(['same-current','same-voltage'].includes(action)){
+      const plan=transferPlan({action,selected:state.selected,graph:state.graph});
+      if(plan.status==='incomplete'){incomplete(action,plan.missing.kind,plan.message);return}
+      if(plan.status==='wrong'){reject(plan.message);return}
+      const resistor=state.graph.edges.find(edge=>edge.id===plan.operation.edgeId),result=expandEdge(state.graph,resistor.id),property=plan.operation.property;
+      countTurn();if(currentTutorial.active&&action==='same-current')finishCurrentTutorial();state.layoutHints.delete(resistor.id);state.graph=result.graph;delete state.known[resistor.id];
+      result.graph.edges.filter(edge=>resistor.history.children.some(child=>child.id===edge.id)).forEach(edge=>{state.known[edge.id]={...(state.known[edge.id]||{}),[property]:true}});
+      state.selected.clear();if(finishCalculationIfReady())return;render();setMessage(plan.message,'good');return
     }
-    if(resistorIds.length!==1){reject('Select one resistance value.');return}
+    if(resistorIds.length!==1){incomplete(action,'resistance','Select one resistance.');return}
     const resistor=state.graph.edges.find(edge=>edge.id===resistorIds[0]);
     const known=state.known[resistor.id]||{};
     if(action==='voltage-multiply'){
-      const currentSelected=state.selected.has(`CURRENT:${resistor.id}`)||(state.graph.edges.length===1&&state.selected.has('CURRENT'));
-      if(!known.current||!currentSelected){reject('Select the current for this resistance.');return}
-      if(known.voltage){reject('That voltage is already known.');return}
-      known.voltage=true;state.known[resistor.id]=known;state.selected.clear();
+      const currentSelected=state.selected.has(`CURRENT:${resistor.id}`);
+      const anyCurrent=[...state.selected].some(id=>id.startsWith('CURRENT:'));
+      if(!anyCurrent){incomplete(action,'current');return}
+      if(!known.current||!currentSelected){reject('That current belongs to a different resistance.');return}
+      if(known.voltage){incomplete(action,'voltage','That voltage is already known.');return}
+      countTurn();known.voltage=true;state.known[resistor.id]=known;state.selected.clear();
       if(finishCalculationIfReady())return;
       render();setMessage('Voltage calculated.','good');return
     }
     if(action==='current-divide'){
-      if(!known.voltage||!state.selected.has(`VOLTAGE:${resistor.id}`)){reject('Select the voltage for this resistance.');return}
-      if(known.current){reject('That current is already known.');return}
-      known.current=true;state.known[resistor.id]=known;state.selected.clear();
+      const ownVoltage=state.selected.has(`VOLTAGE:${resistor.id}`),supplySelected=state.selected.has('SUPPLY'),anyVoltage=supplySelected||[...state.selected].some(id=>id.startsWith('VOLTAGE:'));
+      if(!anyVoltage){incomplete(action,'voltage');return}
+      if(supplySelected&&!spansSupply(resistor,state.graph)){reject('That voltage is not across this resistance.');return}
+      if(!ownVoltage&&!supplySelected){reject('That voltage belongs to a different resistance.');return}
+      if(!known.voltage&&!supplySelected){reject('That voltage is not known yet.');return}
+      if(known.current){incomplete(action,'current','That current is already known.');return}
+      countTurn();known.current=true;state.known[resistor.id]=known;state.selected.clear();
       if(finishCalculationIfReady())return;
       render();setMessage('Current calculated.','good');return
     }
     reject('That rule cannot determine a missing value here.');return
   }
   const resistorIds=selectedResistorIds();
+  if(resistorIds.length<2){incomplete(action,'resistance','Select resistors to combine.');return}
   const relation=relationship(state.graph,resistorIds);
   if(!relation||relation.type!==action){reject(explain(relation,action));return}
   const selectedPlacements=resistorIds.map(id=>state.gridLayout?.components.get(id)).filter(Boolean),layoutHint=selectedPlacements.length?{orientation:selectedPlacements.some(item=>item.orientation==='vertical')?'vertical':'horizontal',col:selectedPlacements.reduce((sum,item)=>sum+item.col,0)/selectedPlacements.length,row:selectedPlacements.reduce((sum,item)=>sum+item.row,0)/selectedPlacements.length}:null;
@@ -268,11 +271,11 @@ function submit(action){
   state.graph.edges.forEach(edge=>{const placement=state.gridLayout?.components.get(edge.id);if(placement)state.layoutHints.set(edge.id,{orientation:placement.orientation,col:placement.col,row:placement.row})});
   resistorIds.forEach(id=>state.layoutHints.delete(id));if(layoutHint)state.layoutHints.set(result.edge.id,layoutHint);
   if(tutorial.active&&tutorial.step===2&&action==='series')finishTutorial();
-  setMessage('');
+  countTurn();setMessage('');
   animateToEquivalent(result.graph,result.edge.id,()=>{state.graph=result.graph;state.selected.clear();state.hinted.clear();if(isSolved(state.graph)&&calculationLevel){state.phase='total';render()}else if(isSolved(state.graph)){render();complete()}else{render();setMessage('Resistors combined.','good')}});
 }
 
-function reject(text){setMessage(text,'error');$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}
+function reject(text){countTurn();setMessage(text,'error');renderActions();syncTutorial();$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}
 
 function animateToEquivalent(nextGraph,equivalentId,done){
   const circuit=$('#circuit'),elements=[...circuit.querySelectorAll('.resistor')];
@@ -295,10 +298,10 @@ function finishCalculationIfReady(){
   return false
 }
 function hint(){
-  if(state.solved)return;state.turns++;$('#turnCount').textContent=state.turns;
+  if(state.solved)return;clearFormulaPrompt();countTurn();renderActions();
   const calculationLevel=['complete','voltage'].includes(state.level.mode);
   if(calculationLevel&&state.phase==='total'){const equivalent=state.graph.edges[0],voltageKnown=state.known[equivalent.id]?.voltage;state.selected=new Set([equivalent.id,voltageKnown?`VOLTAGE:${equivalent.id}`:'SUPPLY']);renderCircuit();renderSelection();setMessage(voltageKnown?'The selected voltage and resistance can determine current.':'The supply voltage and total resistance can determine current.');return}
-  if(calculationLevel&&state.phase==='expand'){const edges=state.graph.edges,edge=edges.find(item=>{const known=state.known[item.id]||{};if(item.history){const required=item.history.type==='series'?'current':'voltage';return !known[required]}return !known.current||state.level.mode==='voltage'&&!known.voltage})||edges.find(item=>item.history);if(!edge)return;const known=state.known[edge.id]||{},root=edges.length===1;if(edge.history){const required=edge.history.type==='series'?'current':'voltage';if(!known[required]){const available=required==='current'?'voltage':'current',valueId=available==='current'&&(root)?'CURRENT':`${available.toUpperCase()}:${edge.id}`;state.selected=new Set([edge.id,valueId])}else{const valueId=required==='current'&&root?'CURRENT':`${required.toUpperCase()}:${edge.id}`;state.selected=new Set([edge.id,valueId])}}else if(known.current&&!known.voltage)state.selected=new Set([edge.id,root?'CURRENT':`CURRENT:${edge.id}`]);else state.selected=new Set([edge.id,`VOLTAGE:${edge.id}`]);renderCircuit();renderSelection();setMessage('The selected values can be used together.');return}
+  if(calculationLevel&&state.phase==='expand'){const edges=state.graph.edges,edge=edges.find(item=>{const known=state.known[item.id]||{};if(item.history){const required=item.history.type==='series'?'current':'voltage';return !known[required]}return !known.current||state.level.mode==='voltage'&&!known.voltage})||edges.find(item=>item.history);if(!edge)return;const known=state.known[edge.id]||{};if(edge.history){const required=edge.history.type==='series'?'current':'voltage';if(!known[required]){const available=required==='current'?'voltage':'current',valueId=available==='current'?currentToken(edge.id):`VOLTAGE:${edge.id}`;state.selected=new Set([edge.id,valueId])}else state.selected=new Set([required==='current'?currentToken(edge.id):`VOLTAGE:${edge.id}`])}else if(known.current&&!known.voltage)state.selected=new Set([edge.id,currentToken(edge.id)]);else state.selected=new Set([edge.id,`VOLTAGE:${edge.id}`]);renderCircuit();renderSelection();setMessage('The selected values can be used together.');return}
   const hint=bestGroup();if(!hint)return;
   state.selected=new Set(hint.set);state.hinted=new Set(hint.set);renderCircuit();renderSelection();setMessage(hint.rel.type==='series'?'These resistors follow one current path, so they are in series.':'These resistors sit on separate branches, so they are in parallel.');
 }
@@ -309,7 +312,7 @@ function complete(trace=false){
 }
 
 function loadLevel(index){
-  levelIndex=index;const level=LEVELS[index],calculationLevel=['complete','voltage'].includes(level.mode),supplyLevel=calculationLevel&&level.supplies?.length>1;state={level,graph:level.graph?cloneGraph(level.graph):null,turns:0,selected:new Set(level.preselect||[]),hinted:new Set(),values:{},known:{},current:null,solved:false,phase:supplyLevel?'supply':calculationLevel?'simplify':null,layoutHints:new Map(),gridLayout:null,gridViewport:null};$('#gameCard').classList.remove('reviewing');$('#resultButton').hidden=true;setMessage('');render()
+  levelIndex=index;const level=LEVELS[index],calculationLevel=['complete','voltage'].includes(level.mode),supplyLevel=calculationLevel&&level.supplies?.length>1;state={level,graph:level.graph?cloneGraph(level.graph):null,turns:0,selected:new Set(level.preselect||[]),hinted:new Set(),values:{},known:{},current:null,solved:false,phase:supplyLevel?'supply':calculationLevel?'simplify':null,layoutHints:new Map(),gridLayout:null,gridViewport:null};$('#gameCard').classList.remove('reviewing');$('#resultButton').hidden=true;clearFormulaPrompt();setMessage('');render()
 }
 
 function renderLevels(){
