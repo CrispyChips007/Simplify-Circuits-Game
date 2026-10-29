@@ -247,6 +247,41 @@ export function reduceSeriesGridLayout(layout,selectedIds,equivalentId){
   return reduced;
 }
 
+const portDelta={N:[0,-1],E:[1,0],S:[0,1],W:[-1,0]};
+function traceToJunction(layout,placement,port){
+  let previous={col:placement.col,row:placement.row},current={col:placement.col+portDelta[port][0],row:placement.row+portDelta[port][1]},path=[connectionKey(previous,current)];
+  for(let steps=0;steps<layout.cols*layout.rows;steps++){
+    const ports=layout.directions.get(cellKey(current.col,current.row))||new Set();if(ports.size!==2)return{terminal:current,path};
+    const next=[...ports].map(item=>({col:current.col+portDelta[item][0],row:current.row+portDelta[item][1]})).find(item=>item.col!==previous.col||item.row!==previous.row);if(!next)break;
+    path.push(connectionKey(current,next));previous=current;current=next;
+  }
+  throw new Error('Parallel branch does not reach a junction.');
+}
+function finishReducedLayout(layout,components,connections){
+  const componentCells=new Set([...components.values()].map(item=>cellKey(item.col,item.row)));let changed=true;while(changed){changed=false;const directions=directionsFor({connections});for(const [key,ports] of directions)if(!componentCells.has(key)&&ports.size===1){const [col,row]=parseCell(key),port=[...ports][0],next={col:col+portDelta[port][0],row:row+portDelta[port][1]};connections.delete(connectionKey({col,row},next));changed=true}}
+  const reduced={...layout,components,connections};reduced.directions=directionsFor(reduced);reduced.wires=[...reduced.directions].filter(([key])=>!componentCells.has(key)).map(([key,ports])=>{const [col,row]=parseCell(key);return{col,row,ports:[...ports].sort().join('')}});return reduced;
+}
+export function reduceParallelGridLayout(layout,selectedIds,equivalentId){
+  const selected=new Set(selectedIds),placements=selectedIds.map(id=>layout.components.get(id)).filter(Boolean);if(placements.length!==selectedIds.length)throw new Error('Selected resistor is missing from the grid.');
+  const components=new Map([...layout.components].filter(([id])=>!selected.has(id)).map(([id,item])=>[id,{...item}])),connections=new Set(layout.connections),average={col:placements.reduce((sum,item)=>sum+item.col,0)/placements.length,row:placements.reduce((sum,item)=>sum+item.row,0)/placements.length},occupied=new Set([...components.values()].map(item=>cellKey(item.col,item.row)));
+  let target,orientation;
+  if(placements.every(item=>item.orientation==='vertical')&&new Set(placements.map(item=>item.row)).size===1){
+    orientation='vertical';const row=placements[0].row,candidates=[];for(let col=Math.min(...placements.map(item=>item.col));col<=Math.max(...placements.map(item=>item.col));col++)if(!occupied.has(cellKey(col,row)))candidates.push({col,row});candidates.sort((a,b)=>Math.abs(a.col-average.col)-Math.abs(b.col-average.col));target=candidates[0];
+    for(const placement of placements)for(const raw of [...connections])if(raw.split('|').includes(cellKey(placement.col,placement.row)))connections.delete(raw);
+    addConnection(connections,{col:target.col,row:target.row-1},target);addConnection(connections,target,{col:target.col,row:target.row+1});
+  }else if(placements.every(item=>item.orientation==='horizontal')){
+    orientation='horizontal';const leftTraces=placements.map(item=>traceToJunction(layout,item,'W')),rightTraces=placements.map(item=>traceToJunction(layout,item,'E')),traces=[...leftTraces,...rightTraces],centre=items=>({col:Math.round(items.reduce((sum,item)=>sum+item.terminal.col,0)/items.length),row:Math.round(items.reduce((sum,item)=>sum+item.terminal.row,0)/items.length)});
+    traces.forEach(item=>item.path.forEach(raw=>connections.delete(raw)));const left=centre(leftTraces),right=centre(rightTraces),row=Math.round(average.row),col=Math.round(average.col);target={col,row};if(occupied.has(cellKey(col,row)))throw new Error('The parallel midpoint cell is occupied.');
+    const before={col:target.col-1,row:target.row},after={col:target.col+1,row:target.row};addCableRun(connections,left,before);addConnection(connections,before,target);addConnection(connections,target,after);addCableRun(connections,after,right);
+  }else throw new Error('Mixed-orientation parallel reduction is not supported by this grid.');
+  components.set(equivalentId,{id:equivalentId,type:'resistor',orientation,...target});return finishReducedLayout(layout,components,connections);
+}
+
+export function chooseReducedGridLayout(current,inPlace,compact,untouchedIds){
+  const sameCell=id=>{const before=current.components.get(id),after=compact.components.get(id);return before&&after&&before.col===after.col&&before.row===after.row&&before.orientation===after.orientation};
+  return untouchedIds.every(sameCell)?compact:inPlace;
+}
+
 export function validateGridLayout(layout){
   const issues=[],occupied=new Map();
   for(const component of layout.components.values()){

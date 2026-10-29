@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, relationship, reduceGraph, treeValues
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, glideRotation, reduceSeriesGridLayout } from './grid-layout.js?v=20261029-10';
+import { buildGridLayout, chooseReducedGridLayout, glideRotation, reduceParallelGridLayout, reduceSeriesGridLayout } from './grid-layout.js?v=20261029-12';
 import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, starsForTurns, transferPlan } from './interactions.js?v=20261029-2';
 
 const $=selector=>document.querySelector(selector);
@@ -248,10 +248,10 @@ function submit(action){
   if(!result.ok){reject(result.reason);return}
   state.graph.edges.forEach(edge=>{const placement=state.gridLayout?.components.get(edge.id);if(placement)state.layoutHints.set(edge.id,{orientation:placement.orientation,col:placement.col,row:placement.row})});
   resistorIds.forEach(id=>state.layoutHints.delete(id));if(layoutHint)state.layoutHints.set(result.edge.id,layoutHint);
-  const nextLayout=relation.type==='series'?reduceSeriesGridLayout(state.gridLayout,resistorIds,result.edge.id):buildGridLayout(result.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints});
+  const inPlaceLayout=relation.type==='series'?reduceSeriesGridLayout(state.gridLayout,resistorIds,result.edge.id):reduceParallelGridLayout(state.gridLayout,resistorIds,result.edge.id),compactLayout=buildGridLayout(result.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),untouchedIds=state.graph.edges.map(edge=>edge.id).filter(id=>!resistorIds.includes(id)),nextLayout=chooseReducedGridLayout(state.gridLayout,inPlaceLayout,compactLayout,untouchedIds),nextViewport=nextLayout===compactLayout?viewportForLayout(compactLayout):state.gridViewport;
   if(tutorial.active&&tutorial.step===2&&action==='series')finishTutorial();
   countTurn();setMessage('');
-  animateToEquivalent(result.graph,result.edge.id,nextLayout,()=>{state.graph=result.graph;state.gridLayout=nextLayout;state.selected.clear();state.hinted.clear();if(isSolved(state.graph)&&calculationLevel){state.phase='total';render()}else if(isSolved(state.graph)){render();complete()}else{render();setMessage('Resistors combined.','good')}});
+  animateToEquivalent(result.graph,result.edge.id,nextLayout,()=>{state.graph=result.graph;state.gridLayout=nextLayout;state.gridViewport=nextViewport;state.selected.clear();state.hinted.clear();if(isSolved(state.graph)&&calculationLevel){state.phase='total';render()}else if(isSolved(state.graph)){render();complete()}else{render();setMessage('Resistors combined.','good')}});
 }
 
 function reject(text){countTurn();setMessage(text,'error');renderActions();syncTutorial();$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}

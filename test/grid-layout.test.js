@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LEVELS } from '../dist/src/levels.js';
-import { buildGridLayout, glideRotation, GRID_COLS, GRID_ROWS, reduceSeriesGridLayout, validateGridLayout } from '../dist/src/grid-layout.js';
+import { buildGridLayout, chooseReducedGridLayout, glideRotation, GRID_COLS, GRID_ROWS, MIN_COLS, MIN_ROWS, reduceParallelGridLayout, reduceSeriesGridLayout, validateGridLayout } from '../dist/src/grid-layout.js';
 import { reduceGraph } from '../dist/src/solver.js';
 
 test('every level and reduction state fits the fixed circuit grid',()=>{
@@ -54,6 +54,19 @@ test('a partial series reduction keeps the circuit size and untouched resistors 
 
 test('every valid series subset reduces in place without moving other components',()=>{
   for(const level of LEVELS){const before=buildGridLayout(level.graph),ids=level.graph.edges.map(edge=>edge.id);for(let mask=1;mask<(1<<ids.length);mask++){const selected=ids.filter((_,index)=>mask&(1<<index)),result=reduceGraph(level.graph,selected);if(!result.ok||result.edge.history.type!=='series')continue;const after=reduceSeriesGridLayout(before,selected,result.edge.id);assert.equal(after.width,before.width,`level ${level.id} changed width`);assert.equal(after.height,before.height,`level ${level.id} changed height`);for(const id of ids.filter(id=>!selected.includes(id)))assert.deepEqual(after.components.get(id),before.components.get(id),`level ${level.id} moved ${id}`);assert.deepEqual(validateGridLayout(after),[],`level ${level.id} produced an invalid in-place reduction`)}}
+});
+
+test('level four parallel reduction stays on the existing grid',()=>{
+  const level=LEVELS[3],before=buildGridLayout(level.graph),result=reduceGraph(level.graph,['R2','R3']),inPlace=reduceParallelGridLayout(before,['R2','R3'],result.edge.id),compact=buildGridLayout(result.graph),after=chooseReducedGridLayout(before,inPlace,compact,['R1','R4']);
+  for(const id of ['R1','R4'])assert.deepEqual(after.components.get(id),before.components.get(id),`${id} moved`);assert.equal(after.components.get(result.edge.id).col,5);assert.equal(after.components.get(result.edge.id).row,2);assert.ok(after.width<=before.width);assert.ok(after.width>=MIN_COLS);assert.ok(after.height>=MIN_ROWS);assert.deepEqual(validateGridLayout(after),[]);
+});
+
+test('a reduced circuit may shrink to the minimum when no resistor blocks it',()=>{
+  const graph={nodes:['A','B','C','D'],source:'A',sink:'D',edges:[{id:'R1',a:'A',b:'B',value:2},{id:'R2',a:'B',b:'C',value:3},{id:'R3',a:'C',b:'D',value:4}]},before=buildGridLayout(graph),result=reduceGraph(graph,['R1','R2','R3']),inPlace=reduceSeriesGridLayout(before,['R1','R2','R3'],result.edge.id),compact=buildGridLayout(result.graph),after=chooseReducedGridLayout(before,inPlace,compact,[]);assert.equal(after,compact);assert.equal(after.width,MIN_COLS);assert.equal(after.height,MIN_ROWS);assert.deepEqual(validateGridLayout(after),[]);
+});
+
+test('every valid parallel subset keeps untouched resistors fixed while shrinking only when clear',()=>{
+  for(const level of LEVELS){const before=buildGridLayout(level.graph),ids=level.graph.edges.map(edge=>edge.id);for(let mask=1;mask<(1<<ids.length);mask++){const selected=ids.filter((_,index)=>mask&(1<<index)),result=reduceGraph(level.graph,selected);if(!result.ok||result.edge.history.type!=='parallel')continue;const inPlace=reduceParallelGridLayout(before,selected,result.edge.id),compact=buildGridLayout(result.graph),untouched=ids.filter(id=>!selected.includes(id)),after=chooseReducedGridLayout(before,inPlace,compact,untouched);for(const id of untouched)assert.deepEqual(after.components.get(id),before.components.get(id),`level ${level.id} moved ${id}`);assert.ok(after.width>=MIN_COLS&&after.width<=before.width,`level ${level.id} has invalid reduced width`);assert.ok(after.height>=MIN_ROWS&&after.height<=before.height,`level ${level.id} has invalid reduced height`);assert.deepEqual(validateGridLayout(after),[],`level ${level.id} produced an invalid parallel reduction`)}}
 });
 
 test('orientation changes rotate top resistors counter-clockwise and bottom resistors clockwise',()=>{
