@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGrap
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, GRID_COLS, GRID_ROWS } from './grid-layout.js?v=20261029-2';
+import { buildGridLayout } from './grid-layout.js?v=20261029-3';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
@@ -33,7 +33,7 @@ const svgResistorLabel=label=>{const match=String(label).match(/^R(.+)$/);return
 const plainResistorLabel=label=>String(label).replace(/^R(.+)$/,(_,suffix)=>`R${suffix.replace(/\d/g,d=>'₀₁₂₃₄₅₆₇₈₉'[Number(d)])}`);
 
 function renderOriginal(){
-  const snapshot={graph:state.graph,selected:state.selected,hinted:state.hinted,phase:state.phase,solved:state.solved,layoutHints:state.layoutHints,gridLayout:state.gridLayout};
+  const snapshot={graph:state.graph,selected:state.selected,hinted:state.hinted,phase:state.phase,solved:state.solved,layoutHints:state.layoutHints,gridLayout:state.gridLayout,gridViewport:state.gridViewport};
   state.graph=cloneGraph(state.level.graph);state.selected=new Set();state.hinted=new Set();state.phase=state.level.supplies?.length>1?'supply':(['complete','voltage'].includes(state.level.mode)?'simplify':null);state.solved=true;state.layoutHints=new Map();state.gridLayout=null;
   const reference=$('#referenceCircuit');renderCircuit(reference,false);
   reference.querySelectorAll('[tabindex]').forEach(element=>{element.removeAttribute('tabindex');element.removeAttribute('role')});
@@ -70,7 +70,7 @@ function gridWireMarkup(layout){
 }
 
 function gridResistorMarkup(edge,placement){
-  const vertical=placement.orientation==='vertical',selected=state.selected.has(edge.id),hinted=state.hinted.has(edge.id),showValue=state.level.mode!=='relation',transform=`translate(${placement.col*100} ${placement.row*100})`,body=vertical?'<rect class="body" x="33" y="2" width="34" height="96" rx="3"/>':'<rect class="body" x="2" y="33" width="96" height="34" rx="3"/>',name=svgResistorLabel(edge.label||edge.id),text=vertical?`<text class="rid" x="50" y="${showValue?48:56}">${name}</text>${showValue?`<text class="ohms" x="50" y="66">${fmt(edge.value)} Ω</text>`:''}`:`<text class="rid" x="50" y="${showValue?48:56}">${name}</text>${showValue?`<text class="ohms" x="50" y="64">${fmt(edge.value)} Ω</text>`:''}`;
+  const vertical=placement.orientation==='vertical',selected=state.selected.has(edge.id),hinted=state.hinted.has(edge.id),showValue=state.level.mode!=='relation',transform=`translate(${placement.col*100} ${placement.row*100})`,body=vertical?'<rect class="body" x="35" y="0" width="30" height="100"/>':'<rect class="body" x="0" y="35" width="100" height="30"/>',name=svgResistorLabel(edge.label||edge.id),text=vertical?`<text class="rid" x="50" y="${showValue?48:56}">${name}</text>${showValue?`<text class="ohms" x="50" y="66">${fmt(edge.value)} Ω</text>`:''}`:`<text class="rid" x="50" y="${showValue?48:56}">${name}</text>${showValue?`<text class="ohms" x="50" y="64">${fmt(edge.value)} Ω</text>`:''}`;
   return `<g class="resistor grid-component${vertical?' vertical':''}${selected?' selected':''}${hinted?' hinted':''}" data-id="${edge.id}" tabindex="0" role="button" transform="${transform}"><rect class="grid-hitbox" width="100" height="100"/>${body}${text}</g>`;
 }
 
@@ -84,9 +84,12 @@ function gridSupplyMarkup(placement){
   return `<g class="supply-component grid-component${selectable?' selectable':''}${selected?' selected':''}" transform="translate(${x} ${y})"${selectable?` data-id="SUPPLY" tabindex="0" role="button" aria-label="${voltage} volt, ${capacity} amp hour supply"`:''}><rect class="supply-hitbox" width="100" height="100" rx="8"/><path class="battery-line" d="M22 43 H78 M31 57 H69"/><text class="battery-text supply-voltage" x="18" y="29">${voltage} V</text><text class="battery-text supply-capacity" x="18" y="78">${supplyCapacityLabel()}</text></g>`;
 }
 
+function viewportForLayout(layout){return{x:layout.colOffset*100,y:layout.rowOffset*100,width:layout.width*100,height:layout.height*100}}
+function applyViewport(circuit,viewport){circuit.setAttribute('viewBox',`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`);circuit.style.aspectRatio=`${viewport.width}/${viewport.height}`}
+
 function renderCircuit(circuit=$('#circuit'),interactive=true){
-  const layout=buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints});if(interactive)state.gridLayout=layout;
-  circuit.setAttribute('viewBox',`0 0 ${GRID_COLS*100} ${GRID_ROWS*100}`);
+  const layout=buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),viewport=state.gridViewport||viewportForLayout(layout);if(interactive){state.gridLayout=layout;state.gridViewport=viewport}
+  applyViewport(circuit,viewport);
   circuit.innerHTML=gridWireMarkup(layout)+state.graph.edges.map(edge=>gridResistorMarkup(edge,layout.components.get(edge.id))).join('')+gridSupplyMarkup(layout.components.get('SUPPLY'));
   if(interactive){renderKnownValues();bindComponents()}
 }
@@ -178,8 +181,7 @@ function render(){
 }
 
 function applyResponsiveViewBoxes(){
-  const viewBox=`0 0 ${GRID_COLS*100} ${GRID_ROWS*100}`;
-  $('#circuit').setAttribute('viewBox',viewBox);$('#referenceCircuit').setAttribute('viewBox',viewBox);
+  const viewport=state.gridViewport||viewportForLayout(state.gridLayout);applyViewport($('#circuit'),viewport);applyViewport($('#referenceCircuit'),viewport);
 }
 
 function explain(relation,chosen){
@@ -308,7 +310,7 @@ function complete(trace=false){
 }
 
 function loadLevel(index){
-  levelIndex=index;const level=LEVELS[index],calculationLevel=['complete','voltage'].includes(level.mode),supplyLevel=calculationLevel&&level.supplies?.length>1;state={level,graph:level.graph?cloneGraph(level.graph):null,turns:0,selected:new Set(level.preselect||[]),hinted:new Set(),values:{},known:{},current:null,solved:false,phase:supplyLevel?'supply':calculationLevel?'simplify':null,layoutHints:new Map(),gridLayout:null};$('#gameCard').classList.remove('reviewing');$('#resultButton').hidden=true;setMessage('');render()
+  levelIndex=index;const level=LEVELS[index],calculationLevel=['complete','voltage'].includes(level.mode),supplyLevel=calculationLevel&&level.supplies?.length>1;state={level,graph:level.graph?cloneGraph(level.graph):null,turns:0,selected:new Set(level.preselect||[]),hinted:new Set(),values:{},known:{},current:null,solved:false,phase:supplyLevel?'supply':calculationLevel?'simplify':null,layoutHints:new Map(),gridLayout:null,gridViewport:null};$('#gameCard').classList.remove('reviewing');$('#resultButton').hidden=true;setMessage('');render()
 }
 
 function renderLevels(){

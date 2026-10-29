@@ -32,6 +32,11 @@ test('small series circuits stay on one side until wrapping is needed',()=>{
   assert.equal(new Set(rows).size,1);assert.ok(rows.every(row=>row<Math.floor(GRID_ROWS/2)));
 });
 
+test('the opening parallel bank is evenly spaced to the right of the supply',()=>{
+  const level=LEVELS[1],layout=buildGridLayout(level.graph),supplyCol=layout.components.get('SUPPLY').col,columns=level.graph.edges.map(edge=>layout.components.get(edge.id).col);
+  assert.ok(columns.every(col=>col>supplyCol));assert.deepEqual(columns.slice(1).map((col,index)=>col-columns[index]),[2,2]);
+});
+
 test('combined resistors use the nearest cell to their visual midpoint',()=>{
   for(const [level,selected] of [[LEVELS[0],['R1','R2']],[LEVELS[2],['R2','R3']]]){const {after,equivalentId,target}=reduceWithPlacementHints(level,selected),equivalent=after.components.get(equivalentId);assert.ok(Math.abs(equivalent.col-target.col)+Math.abs(equivalent.row-target.row)<=.5,`level ${level.id} moved away from the selected midpoint`)}
 });

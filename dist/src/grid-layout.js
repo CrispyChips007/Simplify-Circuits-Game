@@ -1,6 +1,6 @@
-export const GRID_COLS=10;
-export const GRID_ROWS=5;
-export const MIN_COLS=7;
+export const GRID_COLS=11;
+export const GRID_ROWS=7;
+export const MIN_COLS=9;
 export const MIN_ROWS=5;
 
 const cellKey=(col,row)=>`${col},${row}`;
@@ -70,7 +70,7 @@ function parallelPattern(children){
     mergeInto(result,child,0,rowOffset);
     const left={col:0,row:child.left.row+rowOffset},childRight={col:child.right.col,row:child.right.row+rowOffset},right={col:width-1,row:childRight.row};
     addCableRun(result.connections,childRight,right);terminals.push({left,right});
-    rowOffset+=child.height;
+    rowOffset+=child.height+(index===children.length-1?0:1);
   });
   const firstRow=terminals[0].left.row,lastRow=terminals.at(-1).left.row;
   for(let row=firstRow;row<lastRow;row++){addConnection(result.connections,{col:0,row},{col:0,row:row+1});addConnection(result.connections,{col:width-1,row},{col:width-1,row:row+1})}
@@ -137,6 +137,15 @@ function perimeterPath(width,height,supplyRow){
   return result;
 }
 
+function compactPath(width,height,supplyRow){
+  const result=[];
+  for(let col=0;col<width;col++)result.push({col,row:supplyRow-1});
+  for(let row=supplyRow;row<height;row++)result.push({col:width-1,row});
+  for(let col=width-2;col>=0;col--)result.push({col,row:height-1});
+  for(let row=height-2;row>supplyRow;row--)result.push({col:0,row});
+  return result;
+}
+
 function pathOrientation(path,index){
   const previous=index===0?null:path[index-1],next=index===path.length-1?null:path[index+1];
   if(!previous||!next)return null;
@@ -148,7 +157,7 @@ function pathOrientation(path,index){
 function chooseSeriesSlots(path,edges,hints,colOffset,rowOffset){
   const eligible=path.map((cell,index)=>({cell,index,orientation:pathOrientation(path,index)})).filter(item=>item.orientation&&item.index>0&&item.index<path.length-1);
   const unplaced=edges.every(edge=>!hints?.has(edge.id)),topOnly=unplaced&&edges.length<=3;
-  const candidates=topOnly?eligible.filter(item=>item.orientation==='horizontal'&&item.cell.row===0):eligible;
+  const upperRow=Math.min(...eligible.filter(item=>item.orientation==='horizontal').map(item=>item.cell.row)),candidates=topOnly?eligible.filter(item=>item.orientation==='horizontal'&&item.cell.row===upperRow):eligible;
   let best=null;
   const visit=(start,chosen)=>{
     if(chosen.length===edges.length){
@@ -163,7 +172,7 @@ function chooseSeriesSlots(path,edges,hints,colOffset,rowOffset){
 function buildSeriesRing(graph,source,sink,hints){
   const edges=orderedSeriesEdges(graph,source,sink);let width=MIN_COLS,height=MIN_ROWS,layout=null;
   while(!layout){
-    const supplyRow=Math.floor(height/2),path=perimeterPath(width,height,supplyRow);
+    const supplyRow=Math.floor(height/2),path=edges.length<=3?compactPath(width,height,supplyRow):perimeterPath(width,height,supplyRow);
     const colOffset=Math.floor((GRID_COLS-width)/2),rowOffset=Math.floor((GRID_ROWS-height)/2);
     try{layout={width,height,supply:{col:0,row:supplyRow,orientation:'vertical'},path,slots:chooseSeriesSlots(path,edges,hints,colOffset,rowOffset)}}catch(error){if(width<GRID_COLS)width++;else if(height<GRID_ROWS)height++;else throw error}
   }
@@ -176,8 +185,8 @@ function buildSeriesRing(graph,source,sink,hints){
 function isParallelBank(graph){return graph.edges.length>1&&graph.edges.every(edge=>[edge.a,edge.b].sort().join('|')===[graph.edges[0].a,graph.edges[0].b].sort().join('|'))}
 
 function buildParallelBank(graph,hints){
-  const width=Math.max(MIN_COLS,graph.edges.length+2),height=MIN_ROWS,row=Math.floor(height/2),components=new Map([['SUPPLY',{id:'SUPPLY',type:'supply',orientation:'vertical',col:0,row}]]),connections=new Set(),colOffset=Math.floor((GRID_COLS-width)/2),available=Array.from({length:width-1},(_,index)=>index+1);
-  const columns=graph.edges.map((edge,index)=>{const hint=hints?.get(edge.id),target=hint?hint.col-colOffset:graph.edges.length===1?width/2:1+index*(width-2)/(graph.edges.length-1),column=available.reduce((best,item)=>Math.abs(item-target)<Math.abs(best-target)?item:best,available[0]);available.splice(available.indexOf(column),1);return column});
+  const width=Math.max(MIN_COLS,Math.min(GRID_COLS,graph.edges.length*2+1)),height=MIN_ROWS,row=Math.floor(height/2),components=new Map([['SUPPLY',{id:'SUPPLY',type:'supply',orientation:'vertical',col:0,row}]]),connections=new Set(),colOffset=Math.floor((GRID_COLS-width)/2),available=Array.from({length:width-1},(_,index)=>index+1),rightStart=width-1-2*(graph.edges.length-1);
+  const columns=graph.edges.map((edge,index)=>{const hint=hints?.get(edge.id),fallback=rightStart>=1?rightStart+index*2:1+index*(width-2)/Math.max(1,graph.edges.length-1),target=hint?hint.col-colOffset:fallback,column=available.reduce((best,item)=>Math.abs(item-target)<Math.abs(best-target)?item:best,available[0]);available.splice(available.indexOf(column),1);return column});
   graph.edges.forEach((edge,index)=>components.set(edge.id,{id:edge.id,type:'resistor',orientation:'vertical',col:columns[index],row}));
   for(let col=0;col<width-1;col++){addConnection(connections,{col,row:row-1},{col:col+1,row:row-1});addConnection(connections,{col,row:row+1},{col:col+1,row:row+1})}
   for(const component of components.values()){addConnection(connections,{col:component.col,row:row-1},component);addConnection(connections,component,{col:component.col,row:row+1})}
@@ -209,7 +218,7 @@ export function buildGridLayout(graph,{source=graph.source??graph.nodes[0],sink=
   const series=graph.edges.length===1||(()=>{const degree=new Map();graph.edges.forEach(edge=>{degree.set(edge.a,(degree.get(edge.a)||0)+1);degree.set(edge.b,(degree.get(edge.b)||0)+1)});return[...degree.values()].filter(value=>value===1).length===2&&[...degree.values()].every(value=>value<=2)})();
   const local=series?buildSeriesRing(graph,source,sink,hints):isParallelBank(graph)?buildParallelBank(graph,hints):buildBranchedLayout(graph,source,sink);
   const colOffset=Math.floor((GRID_COLS-local.width)/2),rowOffset=Math.floor((GRID_ROWS-local.height)/2);
-  const layout={cols:GRID_COLS,rows:GRID_ROWS,width:local.width,height:local.height,components:new Map(),connections:new Set()};
+  const layout={cols:GRID_COLS,rows:GRID_ROWS,width:local.width,height:local.height,colOffset,rowOffset,components:new Map(),connections:new Set()};
   mergeInto(layout,local,colOffset,rowOffset);layout.directions=directionsFor(layout);
   layout.wires=[...layout.directions].filter(([key])=>![...layout.components.values()].some(item=>cellKey(item.col,item.row)===key)).map(([key,ports])=>{const [col,row]=parseCell(key);return{col,row,ports:[...ports].sort().join('')}});
   return layout;
