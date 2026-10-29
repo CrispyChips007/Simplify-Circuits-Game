@@ -289,8 +289,10 @@ function complete(trace=false){
   state.solved=true;const stars=starsForTurns(state.turns,state.level.best);progress=saveResult(state.level.id,stars,localStorage,LEVELS.length);$('#stars').textContent='★'.repeat(stars)+'☆'.repeat(3-stars);$('#stars').setAttribute('aria-label',`${stars} out of 3 stars`);$('#completeTitle').textContent=trace?'Original circuit restored':'Circuit solved';$('#completeText').textContent=`${state.turns} turn${state.turns===1?'':'s'}. Best possible: ${state.level.best}.`;$('#nextButton').hidden=state.level.id===LEVELS.length;setMessage('Level complete.','good');$('#gameCard').classList.add('reviewing');$('#resultButton').hidden=false
 }
 
+function cueLevelTitle(){const prompt=$('.prompt');prompt.classList.remove('title-cue');void prompt.offsetWidth;prompt.classList.add('title-cue')}
+
 function loadLevel(index){
-  levelIndex=index;const level=LEVELS[index],calculationLevel=['complete','voltage'].includes(level.mode),supplyLevel=calculationLevel&&level.supplies?.length>1;state={level,graph:level.graph?cloneGraph(level.graph):null,turns:0,selected:new Set(level.preselect||[]),hinted:new Set(),values:{},known:{},current:null,solved:false,phase:supplyLevel?'supply':calculationLevel?'simplify':null,layoutHints:new Map(),gridLayout:null,gridViewport:null};$('#gameCard').classList.remove('reviewing');$('#resultButton').hidden=true;clearFormulaPrompt();setMessage('');render()
+  levelIndex=index;const level=LEVELS[index],calculationLevel=['complete','voltage'].includes(level.mode),supplyLevel=calculationLevel&&level.supplies?.length>1;state={level,graph:level.graph?cloneGraph(level.graph):null,turns:0,selected:new Set(level.preselect||[]),hinted:new Set(),values:{},known:{},current:null,solved:false,phase:supplyLevel?'supply':calculationLevel?'simplify':null,layoutHints:new Map(),gridLayout:null,gridViewport:null};$('#gameCard').classList.remove('reviewing');$('#resultButton').hidden=true;clearFormulaPrompt();setMessage('');render();cueLevelTitle()
 }
 
 function renderLevels(){
