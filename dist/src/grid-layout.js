@@ -245,6 +245,16 @@ export function expandSupplyBankGridLayout(layout,count){
   const right=layout.colOffset+layout.width-1+shift,expanded={...layout,colOffset:firstCol,width:right-firstCol+1,components,connections};expanded.directions=directionsFor(expanded);expanded.wires=[...expanded.directions].filter(([key])=>![...components.values()].some(item=>cellKey(item.col,item.row)===key)).map(([key,ports])=>{const [col,row]=parseCell(key);return{col,row,ports:[...ports].sort().join('')}});return expanded;
 }
 
+export function expandSeriesSupplyGridLayout(layout,count){
+  if(count<2)return layout;
+  const original=layout.components.get('SUPPLY');if(!original)throw new Error('Supply is missing from the grid.');
+  const shift=Math.max(0,2-original.col),components=new Map([...layout.components].map(([id,item])=>[id,{...item,col:item.col+shift}])),connections=new Set();for(const raw of layout.connections){const [a,b]=raw.split('|').map(parseCell);addConnection(connections,{col:a[0]+shift,row:a[1]},{col:b[0]+shift,row:b[1]})}
+  const supply=components.get('SUPPLY'),key=cellKey(supply.col,supply.row);for(const raw of [...connections])if(raw.split('|').includes(key))connections.delete(raw);components.delete('SUPPLY');
+  const path=[{col:supply.col,row:supply.row-1},{col:supply.col-1,row:supply.row-1},{col:supply.col-2,row:supply.row-1},{col:supply.col-2,row:supply.row},{col:supply.col-2,row:supply.row+1},{col:supply.col-1,row:supply.row+1},{col:supply.col,row:supply.row+1}];for(let index=0;index<path.length-1;index++)addConnection(connections,path[index],path[index+1]);
+  const placements=count===2?[{...path[1],orientation:'horizontal'},{...path[5],orientation:'horizontal'}]:[{...path[1],orientation:'horizontal'},{...path[3],orientation:'vertical'},{...path[5],orientation:'horizontal'}];placements.forEach((placement,index)=>components.set(`SUPPLY:${index}`,{id:`SUPPLY:${index}`,type:'supply',...placement}));
+  const firstCol=supply.col-2,right=layout.colOffset+layout.width-1+shift,expanded={...layout,colOffset:firstCol,width:right-firstCol+1,components,connections};expanded.directions=directionsFor(expanded);expanded.wires=[...expanded.directions].filter(([cell])=>![...components.values()].some(item=>cellKey(item.col,item.row)===cell)).map(([cell,ports])=>{const [col,row]=parseCell(cell);return{col,row,ports:[...ports].sort().join('')}});return expanded;
+}
+
 export function reduceSeriesGridLayout(layout,selectedIds,equivalentId){
   const selected=new Set(selectedIds),placements=selectedIds.map(id=>layout.components.get(id)).filter(Boolean);
   if(placements.length!==selectedIds.length)throw new Error('Selected resistor is missing from the grid.');
