@@ -1,7 +1,7 @@
 export const EPSILON = 1e-9;
 
 export function cloneGraph(graph) {
-  return { nodes: [...graph.nodes], edges: graph.edges.map((edge) => structuredClone(edge)), nextId: graph.nextId || 1 };
+  return { nodes: [...graph.nodes], edges: graph.edges.map((edge) => structuredClone(edge)), source:graph.source??graph.nodes[0], sink:graph.sink??graph.nodes.at(-1), nextId: graph.nextId || 1 };
 }
 
 export function nodeDegree(graph, nodeId) {
@@ -32,6 +32,8 @@ export function seriesEndpoints(graph, edges) {
   const endpoints = [...counts].filter(([, count]) => count === 1).map(([node]) => node);
   const internals = [...counts].filter(([, count]) => count === 2).map(([node]) => node);
   if (endpoints.length !== 2 || counts.size !== edges.length + 1) return null;
+  const source=graph.source??graph.nodes[0],sink=graph.sink??graph.nodes.at(-1);
+  if(internals.includes(source)||internals.includes(sink))return null;
   if (internals.some((node) => nodeDegree(graph, node) !== 2)) return null;
   const visited = new Set([endpoints[0]]);
   const queue = [endpoints[0]];
@@ -128,7 +130,7 @@ function solveLinear(matrix,values){
 }
 
 export function solveCircuit(graph,supplyVoltage){
-  const source=graph.nodes[0],sink=graph.nodes[graph.nodes.length-1];
+  const source=graph.source??graph.nodes[0],sink=graph.sink??graph.nodes[graph.nodes.length-1];
   const unknown=graph.nodes.filter(node=>node!==source&&node!==sink),index=new Map(unknown.map((node,i)=>[node,i]));
   const matrix=unknown.map(()=>unknown.map(()=>0)),values=unknown.map(()=>0);
   unknown.forEach(node=>graph.edges.filter(edge=>edge.a===node||edge.b===node).forEach(edge=>{

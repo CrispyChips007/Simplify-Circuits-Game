@@ -1,7 +1,7 @@
 import { templatePositions } from './layout.js';
 
 const edge = (id, a, b, value, label = id) => ({ id, a, b, value, label });
-const graph = (nodes, edges) => ({ nodes, edges, nextId: 1 });
+const graph = (nodes, edges) => ({ nodes, edges, source:nodes[0], sink:nodes.at(-1), nextId: 1 });
 const nested = (values) => graph(['A','B','T','U','D','E'],[
   edge('R1','A','B',values[0]),edge('R2','B','T',values[1]),edge('R3','T','D',values[2]),
   edge('R4','B','U',values[3]),edge('R5','U','D',values[4]),edge('R6','D','E',values[5])
@@ -42,7 +42,7 @@ const LEVELS_SOURCE = [
   custom(27,'Circuit','formula','split-series',['A','T','U','B'],[edge('R1','A','T',5),edge('R2','T','B',7),edge('R3','A','U',6),edge('R4','U','B',6)],3),
   custom(28,'Circuit','formula','unequal-branches',['A','B','T','C','D'],[edge('R1','A','B',3),edge('R2','B','C',10),edge('R3','B','T',4),edge('R4','T','C',6),edge('R5','C','D',7)],3),
   custom(29,'Circuit','formula','three-way-tail',['A','B','T','U','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','T',3),edge('R4','T','C',9),edge('R5','B','U',5),edge('R6','U','C',10),edge('R7','C','D',6)],4),
-  custom(30,'Circuit','formula','offset-double',['A','B','T','C','U','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','U',5),edge('R6','U','D',5)],4),
+  custom(30,'Circuit','formula','offset-tail',['A','B','T','C','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','D',10)],3),
   {id:31,name:'Circuit',mode:'complete',title:'Solve currents',prompt:'Determine every current.',best:7,voltage:24,graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed',mixedOrientation:'vertical'},
   {id:32,name:'Circuit',mode:'complete',title:'Solve currents',prompt:'Determine every current.',best:11,voltage:24,graph:nested([2,4,8,6,6,10]),layout:'nested'},
   {id:33,name:'Circuit',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:10,supplies:[{voltage:12,capacity:3},{voltage:12,capacity:5}],supplyConnection:'parallel',graph:graph(['A','B','C'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','C',6)]),layout:'mixed'},
@@ -51,7 +51,7 @@ const LEVELS_SOURCE = [
   ,{...custom(36,'Circuit','complete','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,10),voltage:24}
   ,{...custom(37,'Circuit','voltage','unequal-branches',['A','B','T','C','D'],[edge('R1','A','B',3),edge('R2','B','C',10),edge('R3','B','T',4),edge('R4','T','C',6),edge('R5','C','D',7)],14),voltage:24}
   ,{...custom(38,'Circuit','voltage','three-way-tail',['A','B','T','U','C','D'],[edge('R1','A','B',4),edge('R2','B','C',12),edge('R3','B','T',3),edge('R4','T','C',9),edge('R5','B','U',5),edge('R6','U','C',10),edge('R7','C','D',6)],18),voltage:24}
-  ,{...custom(39,'Circuit','voltage','offset-double',['A','B','T','C','U','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','U',5),edge('R6','U','D',5)],16),voltage:30}
+  ,{...custom(39,'Circuit','voltage','offset-tail',['A','B','T','C','D'],[edge('R1','A','B',2),edge('R2','B','T',4),edge('R3','T','C',8),edge('R4','B','C',6),edge('R5','C','D',10)],14),voltage:30}
   ,{...custom(40,'Circuit','voltage','parallel-series-parallel',['A','B','C','D'],parallelSeriesParallel([12,12,6,8,8]).edges,14),voltage:24}
   ,{id:41,name:'Circuit',scenario:'Marine battery bank',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:8,supplies:[{voltage:12,capacity:100},{voltage:12,capacity:100},{voltage:12,capacity:100}],supplyConnection:'parallel',graph:graph(['A','B','C'],[edge('R1','A','B',6),edge('R2','B','C',12)]),layout:'series'}
   ,{id:42,name:'Circuit',scenario:'Solar battery string',mode:'voltage',title:'Solve all values',prompt:'Determine every current and voltage.',best:8,supplies:[{voltage:12,capacity:4},{voltage:12,capacity:4},{voltage:12,capacity:4}],supplyConnection:'series',graph:graph(['A','B'],[edge('R1','A','B',18),edge('R2','A','B',18)]),layout:'parallel'}
