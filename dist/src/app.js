@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGrap
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, GRID_COLS, GRID_ROWS } from './grid-layout.js?v=20261029-1';
+import { buildGridLayout, GRID_COLS, GRID_ROWS } from './grid-layout.js?v=20261029-2';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
@@ -70,7 +70,7 @@ function gridWireMarkup(layout){
 }
 
 function gridResistorMarkup(edge,placement){
-  const vertical=placement.orientation==='vertical',selected=state.selected.has(edge.id),hinted=state.hinted.has(edge.id),showValue=state.level.mode!=='relation',transform=`translate(${placement.col*100} ${placement.row*100})`,body=vertical?'<rect class="body" x="26" y="9" width="48" height="82" rx="3"/>':'<rect class="body" x="9" y="26" width="82" height="48" rx="3"/>',name=svgResistorLabel(edge.label||edge.id),text=vertical?`<g transform="translate(50 50) rotate(-90)"><text class="rid" x="0" y="-5">${name}</text>${showValue?`<text class="ohms" x="0" y="14">${fmt(edge.value)} Ω</text>`:''}</g>`:`<text class="rid" x="50" y="${showValue?46:56}">${name}</text>${showValue?`<text class="ohms" x="50" y="65">${fmt(edge.value)} Ω</text>`:''}`;
+  const vertical=placement.orientation==='vertical',selected=state.selected.has(edge.id),hinted=state.hinted.has(edge.id),showValue=state.level.mode!=='relation',transform=`translate(${placement.col*100} ${placement.row*100})`,body=vertical?'<rect class="body" x="33" y="2" width="34" height="96" rx="3"/>':'<rect class="body" x="2" y="33" width="96" height="34" rx="3"/>',name=svgResistorLabel(edge.label||edge.id),text=vertical?`<text class="rid" x="50" y="${showValue?48:56}">${name}</text>${showValue?`<text class="ohms" x="50" y="66">${fmt(edge.value)} Ω</text>`:''}`:`<text class="rid" x="50" y="${showValue?48:56}">${name}</text>${showValue?`<text class="ohms" x="50" y="64">${fmt(edge.value)} Ω</text>`:''}`;
   return `<g class="resistor grid-component${vertical?' vertical':''}${selected?' selected':''}${hinted?' hinted':''}" data-id="${edge.id}" tabindex="0" role="button" transform="${transform}"><rect class="grid-hitbox" width="100" height="100"/>${body}${text}</g>`;
 }
 
@@ -264,6 +264,7 @@ function submit(action){
   const selectedPlacements=resistorIds.map(id=>state.gridLayout?.components.get(id)).filter(Boolean),layoutHint=selectedPlacements.length?{orientation:selectedPlacements.some(item=>item.orientation==='vertical')?'vertical':'horizontal',col:selectedPlacements.reduce((sum,item)=>sum+item.col,0)/selectedPlacements.length,row:selectedPlacements.reduce((sum,item)=>sum+item.row,0)/selectedPlacements.length}:null;
   const result=reduceGraph(state.graph,resistorIds);
   if(!result.ok){reject(result.reason);return}
+  state.graph.edges.forEach(edge=>{const placement=state.gridLayout?.components.get(edge.id);if(placement)state.layoutHints.set(edge.id,{orientation:placement.orientation,col:placement.col,row:placement.row})});
   resistorIds.forEach(id=>state.layoutHints.delete(id));if(layoutHint)state.layoutHints.set(result.edge.id,layoutHint);
   if(tutorial.active&&tutorial.step===2&&action==='series')finishTutorial();
   setMessage('');
