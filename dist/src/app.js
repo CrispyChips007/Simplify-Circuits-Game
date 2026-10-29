@@ -1,9 +1,9 @@
-import { LEVELS } from './levels.js?v=20261029-2';
+import { LEVELS } from './levels.js?v=20261030-3';
 import { cloneGraph, expandEdge, isSolved, relationship, reduceGraph, treeValues } from './solver.js?v=20261029-1';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, chooseReducedGridLayout, glideRotation, reduceParallelGridLayout, reduceSeriesGridLayout } from './grid-layout.js?v=20261029-12';
+import { buildGridLayout, chooseReducedGridLayout, expandSupplyBankGridLayout, glideRotation, reduceParallelGridLayout, reduceSeriesGridLayout } from './grid-layout.js?v=20261030-13';
 import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, starsForTurns, transferPlan } from './interactions.js?v=20261029-4';
 
 const $=selector=>document.querySelector(selector);
@@ -74,26 +74,27 @@ function gridResistorMarkup(edge,placement){
   return `<g class="resistor grid-component${vertical?' vertical':''}${selected?' selected':''}${hinted?' hinted':''}" data-id="${edge.id}" tabindex="0" role="button" transform="${transform}"><rect class="grid-hitbox" width="100" height="100"/>${body}${text}</g>`;
 }
 
-function gridSupplyMarkup(placement){
-  const selectable=!state.solved,x=placement.col*100,y=placement.row*100;
+function gridSupplyMarkup(layout){
+  const selectable=!state.solved;
   if(state.phase==='supply'){
-    const sources=state.level.supplies,series=state.level.supplyConnection==='series';
-    const step=100/sources.length;
-    if(series)return sources.map((item,index)=>{const id=`SUPPLY:${index}`,selected=state.selected.has(id),cy=step*(index+.5);return `<g class="supply-component grid-component selectable${selected?' selected':''}" transform="translate(${x} ${y})" data-id="${id}" tabindex="0" role="button" aria-label="${item.voltage} volt, ${item.capacity} amp hour supply"><rect class="supply-hitbox" x="5" y="${index*step+2}" width="90" height="${step-4}" rx="6"/><path class="battery-line" d="M28 ${cy-4} H72 M35 ${cy+4} H65"/><text class="battery-text supply-bank-label" x="12" y="${cy-9}">${item.voltage} V</text></g>`}).join('');
-    const margin=18,gap=sources.length>1?(100-margin*2)/(sources.length-1):0,centres=sources.map((_,index)=>sources.length===1?50:margin+gap*index),rails=`M50 0 V12 M${centres[0]} 12 H${centres.at(-1)} M50 100 V88 M${centres[0]} 88 H${centres.at(-1)}`;
-    return `<path class="battery-branch" transform="translate(${x} ${y})" d="${rails}"/>`+sources.map((item,index)=>{const id=`SUPPLY:${index}`,selected=state.selected.has(id),cx=centres[index],left=index?((centres[index-1]+cx)/2):0,right=index<sources.length-1?((cx+centres[index+1])/2):100;return `<g class="supply-component grid-component selectable${selected?' selected':''}" transform="translate(${x} ${y})" data-id="${id}" tabindex="0" role="button" aria-label="${item.voltage} volt, ${item.capacity} amp hour supply"><rect class="supply-hitbox" x="${left+2}" y="8" width="${right-left-4}" height="84" rx="6"/><path class="battery-branch" d="M${cx} 12 V44 M${cx} 56 V88"/><path class="battery-line" d="M${cx-10} 44 H${cx+10} M${cx-7} 56 H${cx+7}"/><text class="battery-text supply-bank-label" style="text-anchor:middle" x="${cx}" y="34">${item.voltage} V</text></g>`}).join('');
+    if(state.level.supplyConnection==='series'){
+      const placement=layout.components.get('SUPPLY'),x=placement.col*100,y=placement.row*100,step=100/state.level.supplies.length;
+      return state.level.supplies.map((item,index)=>{const id=`SUPPLY:${index}`,selected=state.selected.has(id),cy=step*(index+.5);return `<g class="supply-component grid-component selectable${selected?' selected':''}" transform="translate(${x} ${y})" data-id="${id}" tabindex="0" role="button" aria-label="${item.voltage} volt, ${item.capacity} amp hour supply"><rect class="supply-hitbox" x="5" y="${index*step+2}" width="90" height="${step-4}" rx="6"/><path class="battery-line" d="M22 ${cy-4} H78 M40 ${cy+4} H60"/><text class="battery-text supply-bank-label" x="12" y="${cy-9}">${item.voltage} V</text></g>`}).join('');
+    }
+    return state.level.supplies.map((item,index)=>{const id=`SUPPLY:${index}`,placement=layout.components.get(id),selected=state.selected.has(id),x=placement.col*100,y=placement.row*100;return `<g class="supply-component grid-component selectable${selected?' selected':''}" transform="translate(${x} ${y})" data-id="${id}" tabindex="0" role="button" aria-label="${item.voltage} volt, ${item.capacity} amp hour supply"><rect class="supply-hitbox" width="100" height="100" rx="6"/><rect class="supply-wire-mask" x="46" width="8" height="100"/><path class="battery-terminal" d="M50 0 V43 M50 57 V100"/><path class="battery-line" d="M22 43 H78 M40 57 H60"/><text class="battery-text supply-bank-label" x="18" y="34">${item.voltage} V</text></g>`}).join('');
   }
+  const placement=layout.components.get('SUPPLY'),x=placement.col*100,y=placement.row*100;
   const selected=state.selected.has('SUPPLY'),voltage=supplyVoltage(),capacity=supplyCapacity();
-  return `<g class="supply-component grid-component${selectable?' selectable':''}${selected?' selected':''}" transform="translate(${x} ${y})"${selectable?` data-id="SUPPLY" tabindex="0" role="button" aria-label="${voltage} volt, ${capacity} amp hour supply"`:''}><rect class="supply-hitbox" width="100" height="100" rx="8"/><path class="battery-line" d="M22 43 H78 M31 57 H69"/><text class="battery-text supply-voltage" x="18" y="29">${voltage} V</text><text class="battery-text supply-capacity" x="18" y="78">${supplyCapacityLabel()}</text></g>`;
+  return `<g class="supply-component grid-component${selectable?' selectable':''}${selected?' selected':''}" transform="translate(${x} ${y})"${selectable?` data-id="SUPPLY" tabindex="0" role="button" aria-label="${voltage} volt, ${capacity} amp hour supply"`:''}><rect class="supply-hitbox" width="100" height="100" rx="8"/><rect class="supply-wire-mask" x="46" width="8" height="100"/><path class="battery-terminal" d="M50 0 V43 M50 57 V100"/><path class="battery-line" d="M22 43 H78 M40 57 H60"/><text class="battery-text supply-voltage" x="18" y="29">${voltage} V</text><text class="battery-text supply-capacity" x="18" y="78">${supplyCapacityLabel()}</text></g>`;
 }
 
 function viewportForLayout(layout){return{x:layout.colOffset*100,y:layout.rowOffset*100,width:layout.width*100,height:layout.height*100}}
 function applyViewport(circuit,viewport){circuit.setAttribute('viewBox',`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`);circuit.style.aspectRatio=`${viewport.width}/${viewport.height}`}
 
 function renderCircuit(circuit=$('#circuit'),interactive=true){
-  const layout=interactive&&state.gridLayout?state.gridLayout:buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),viewport=interactive?(state.gridViewport||viewportForLayout(layout)):viewportForLayout(layout);if(interactive){state.gridLayout=layout;state.gridViewport=viewport}
+  const baseLayout=interactive&&state.gridLayout?state.gridLayout:buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),layout=state.phase==='supply'&&state.level.supplyConnection==='parallel'&&state.level.supplies?.length>1&&!baseLayout.components.has('SUPPLY:0')?expandSupplyBankGridLayout(baseLayout,state.level.supplies.length):baseLayout,viewport=interactive?(state.gridViewport||viewportForLayout(layout)):viewportForLayout(layout);if(interactive){state.gridLayout=layout;state.gridViewport=viewport}
   applyViewport(circuit,viewport);
-  circuit.innerHTML=gridWireMarkup(layout)+state.graph.edges.map(edge=>gridResistorMarkup(edge,layout.components.get(edge.id))).join('')+gridSupplyMarkup(layout.components.get('SUPPLY'));
+  circuit.innerHTML=gridWireMarkup(layout)+state.graph.edges.map(edge=>gridResistorMarkup(edge,layout.components.get(edge.id))).join('')+gridSupplyMarkup(layout);
   if(interactive){renderKnownValues();bindComponents()}
 }
 
@@ -212,7 +213,7 @@ function submit(action){
     const expected=`supply-${state.level.supplyConnection}`,selected=[...state.selected].filter(id=>id.startsWith('SUPPLY:'));
     if(selected.length!==state.level.supplies.length){incomplete(action,'supply','Select all supplies in the bank.');return}
     if(action!==expected){reject('That rule does not match how these supplies are connected.');return}
-    countTurn();state.phase='simplify';state.selected.clear();render();return
+    const nextLayout=buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),nextViewport=viewportForLayout(nextLayout);countTurn();setMessage('');animateSupplyBank(nextLayout,()=>{state.phase='simplify';state.selected.clear();state.gridLayout=nextLayout;state.gridViewport=nextViewport;render()});return
   }
   if(state.level.mode==='formula'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,'resistance');else reject('That rule cannot combine the selected resistors.');return}
   if(calculationLevel&&state.phase==='simplify'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,'resistance');else reject('That rule cannot be applied to the selected values.');return}
@@ -258,6 +259,12 @@ function submit(action){
 }
 
 function reject(text){countTurn();setMessage(text,'error');renderActions();syncTutorial();$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}
+
+function animateSupplyBank(nextLayout,done){
+  const circuit=$('#circuit'),destination=nextLayout.components.get('SUPPLY'),elements=[...circuit.querySelectorAll('.resistor,.supply-component')],items=elements.map(el=>{const matrix=el.transform.baseVal.consolidate()?.matrix,bbox=el.getBBox(),x=matrix?.e||0,y=matrix?.f||0,isSupply=el.classList.contains('supply-component'),to=isSupply?destination:nextLayout.components.get(el.dataset.id),target=to?{x:(to.col+.5)*100,y:(to.row+.5)*100}:{x:x+bbox.width/2,y:y+bbox.height/2};return{el,x,y,cx:x+bbox.width/2,cy:y+bbox.height/2,target,isSupply}}),duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:760,start=performance.now();let crossed=false,ghost=null;
+  const crossfade=raw=>{if(!crossed&&raw>=.72){ghost=circuit.cloneNode(true);ghost.removeAttribute('id');ghost.classList.add('circuit-ghost');circuit.parentElement.appendChild(ghost);crossed=true;done();circuit.style.opacity='0'}if(crossed){const fade=Math.min(1,(raw-.72)/.28);ghost.style.opacity=String(1-fade);circuit.style.opacity=String(fade)}};
+  const frame=now=>{const raw=duration?Math.min(1,(now-start)/duration):1,t=1-Math.pow(1-raw,3);items.forEach(item=>{item.el.setAttribute('transform',`translate(${item.x+(item.target.x-item.cx)*t} ${item.y+(item.target.y-item.cy)*t})`);if(item.isSupply)item.el.style.opacity=String(Math.max(.18,1-raw*.75))});crossfade(raw);if(raw<1)requestAnimationFrame(frame);else{if(!crossed)done();ghost?.remove();circuit.style.opacity=''}};requestAnimationFrame(frame);
+}
 
 function animateToEquivalent(nextGraph,equivalentId,nextLayout,done){
   const circuit=$('#circuit'),elements=[...circuit.querySelectorAll('.resistor')];

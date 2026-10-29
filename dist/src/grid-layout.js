@@ -234,6 +234,17 @@ export function buildGridLayout(graph,{source=graph.source??graph.nodes[0],sink=
   return layout;
 }
 
+export function expandSupplyBankGridLayout(layout,count){
+  if(count<2)return layout;
+  const original=layout.components.get('SUPPLY');if(!original)throw new Error('Supply is missing from the grid.');
+  const extra=count-1,shift=Math.max(0,extra-layout.colOffset),components=new Map([...layout.components].map(([id,item])=>[id,{...item,col:item.col+shift}])),connections=new Set();
+  for(const raw of layout.connections){const [a,b]=raw.split('|').map(parseCell);addConnection(connections,{col:a[0]+shift,row:a[1]},{col:b[0]+shift,row:b[1]})}
+  const supply=components.get('SUPPLY'),supplyKey=cellKey(supply.col,supply.row);for(const raw of [...connections])if(raw.split('|').includes(supplyKey))connections.delete(raw);components.delete('SUPPLY');
+  const firstCol=supply.col-extra,lastCol=supply.col;for(let index=0;index<count;index++){const col=firstCol+index,id=`SUPPLY:${index}`;components.set(id,{id,type:'supply',orientation:'vertical',col,row:supply.row});addConnection(connections,{col,row:supply.row-1},{col,row:supply.row});addConnection(connections,{col,row:supply.row},{col,row:supply.row+1})}
+  for(let col=firstCol;col<lastCol;col++){addConnection(connections,{col,row:supply.row-1},{col:col+1,row:supply.row-1});addConnection(connections,{col,row:supply.row+1},{col:col+1,row:supply.row+1})}
+  const right=layout.colOffset+layout.width-1+shift,expanded={...layout,colOffset:firstCol,width:right-firstCol+1,components,connections};expanded.directions=directionsFor(expanded);expanded.wires=[...expanded.directions].filter(([key])=>![...components.values()].some(item=>cellKey(item.col,item.row)===key)).map(([key,ports])=>{const [col,row]=parseCell(key);return{col,row,ports:[...ports].sort().join('')}});return expanded;
+}
+
 export function reduceSeriesGridLayout(layout,selectedIds,equivalentId){
   const selected=new Set(selectedIds),placements=selectedIds.map(id=>layout.components.get(id)).filter(Boolean);
   if(placements.length!==selectedIds.length)throw new Error('Selected resistor is missing from the grid.');
