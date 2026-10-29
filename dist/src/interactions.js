@@ -14,6 +14,12 @@ export function rotateActions(actions,turns){
 export function currentToken(edgeId){return`CURRENT:${edgeId}`}
 export function voltageToken(edgeId){return`VOLTAGE:${edgeId}`}
 
+export function sharesSeriesCurrent(graph,leftId,rightId){
+  if(leftId===rightId)return true;const source=graph.source??graph.nodes[0],sink=graph.sink??graph.nodes.at(-1),degree=new Map();graph.edges.forEach(edge=>{degree.set(edge.a,(degree.get(edge.a)||0)+1);degree.set(edge.b,(degree.get(edge.b)||0)+1)});const byId=new Map(graph.edges.map(edge=>[edge.id,edge])),seen=new Set([leftId]),pending=[leftId];
+  while(pending.length){const id=pending.shift(),edge=byId.get(id);if(!edge)continue;for(const junction of [edge.a,edge.b]){if(junction===source||junction===sink||degree.get(junction)!==2)continue;for(const next of graph.edges.filter(item=>item.id!==id&&(item.a===junction||item.b===junction))){if(next.id===rightId)return true;if(!seen.has(next.id)){seen.add(next.id);pending.push(next.id)}}}}
+  return false;
+}
+
 const result=(status,message,{missing=null,operation=null}={})=>({status,countTurn:status!=='incomplete',message,missing,operation});
 
 export function evaluateFormula({action,selected,edge,known={},knownByEdge={},graph}){
@@ -22,8 +28,8 @@ export function evaluateFormula({action,selected,edge,known={},knownByEdge={},gr
     if(known.voltage)return result('incomplete','That voltage is already known.');
     const currents=[...selected].filter(id=>id.startsWith('CURRENT:'));
     if(!currents.length)return result('incomplete','Select a current.',{missing:{kind:'current',ownerId:edge.id}});
-    if(currents.length!==1||currents[0]!==currentToken(edge.id)||!known.current)return result('wrong','That current belongs to a different resistance.');
-    return result('correct','Voltage calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'voltage'}});
+    const sourceId=currents[0]?.slice('CURRENT:'.length),sourceKnown=sourceId===edge.id?known.current:knownByEdge[sourceId]?.current;if(currents.length!==1||!sourceKnown||!sharesSeriesCurrent(graph,sourceId,edge.id))return result('wrong','That current follows a different path.');
+    return result('correct','Voltage calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'voltage',alsoKnown:sourceId===edge.id?null:'current'}});
   }
   if(action==='current-divide'){
     if(known.current)return result('incomplete','That current is already known.');
@@ -32,7 +38,7 @@ export function evaluateFormula({action,selected,edge,known={},knownByEdge={},gr
     if(voltages.length+(supply?1:0)!==1)return result('wrong','Select one voltage for this resistance.');
     if(supply&&!spansSupply(edge,graph))return result('wrong','That voltage is not across this resistance.');
     if(voltages.length){const sourceId=voltages[0].slice('VOLTAGE:'.length),source=graph.edges.find(item=>item.id===sourceId),sameVoltage=source&&endpointKey(source.a,source.b)===endpointKey(edge.a,edge.b),sourceKnown=sourceId===edge.id?known.voltage:knownByEdge[sourceId]?.voltage;if(!sameVoltage||!sourceKnown)return result('wrong','That voltage is not across this resistance.')}
-    return result('correct','Current calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'current'}});
+    return result('correct','Current calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'current',alsoKnown:voltages.length&&voltages[0]!==voltageToken(edge.id)?'voltage':null}});
   }
   return result('wrong','That rule cannot determine a missing value here.');
 }
