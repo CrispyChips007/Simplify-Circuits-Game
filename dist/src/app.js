@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, relationship, reduceGraph, treeValues
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-9';
+import { buildGridLayout, glideRotation, reduceSeriesGridLayout } from './grid-layout.js?v=20261029-10';
 import { currentToken, rotateActions, spansSupply, transferPlan } from './interactions.js?v=20261029-1';
 
 const $=selector=>document.querySelector(selector);
@@ -88,7 +88,7 @@ function viewportForLayout(layout){return{x:layout.colOffset*100,y:layout.rowOff
 function applyViewport(circuit,viewport){circuit.setAttribute('viewBox',`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`);circuit.style.aspectRatio=`${viewport.width}/${viewport.height}`}
 
 function renderCircuit(circuit=$('#circuit'),interactive=true){
-  const layout=buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),viewport=state.gridViewport||viewportForLayout(layout);if(interactive){state.gridLayout=layout;state.gridViewport=viewport}
+  const layout=interactive&&state.gridLayout?state.gridLayout:buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),viewport=state.gridViewport||viewportForLayout(layout);if(interactive){state.gridLayout=layout;state.gridViewport=viewport}
   applyViewport(circuit,viewport);
   circuit.innerHTML=gridWireMarkup(layout)+state.graph.edges.map(edge=>gridResistorMarkup(edge,layout.components.get(edge.id))).join('')+gridSupplyMarkup(layout.components.get('SUPPLY'));
   if(interactive){renderKnownValues();bindComponents()}
@@ -231,7 +231,7 @@ function submit(action){
       if(plan.status==='incomplete'){incomplete(action,plan.missing.kind,plan.message);return}
       if(plan.status==='wrong'){reject(plan.message);return}
       const resistor=state.graph.edges.find(edge=>edge.id===plan.operation.edgeId),result=expandEdge(state.graph,resistor.id),property=plan.operation.property;
-      countTurn();if(currentTutorial.active&&action==='same-current')finishCurrentTutorial();state.layoutHints.delete(resistor.id);state.graph=result.graph;delete state.known[resistor.id];
+      countTurn();if(currentTutorial.active&&action==='same-current')finishCurrentTutorial();state.layoutHints.delete(resistor.id);state.gridLayout=null;state.graph=result.graph;delete state.known[resistor.id];
       result.graph.edges.filter(edge=>resistor.history.children.some(child=>child.id===edge.id)).forEach(edge=>{state.known[edge.id]={...(state.known[edge.id]||{}),[property]:true}});
       state.selected.clear();if(finishCalculationIfReady())return;render();setMessage(plan.message,'good');return
     }
@@ -270,18 +270,19 @@ function submit(action){
   if(!result.ok){reject(result.reason);return}
   state.graph.edges.forEach(edge=>{const placement=state.gridLayout?.components.get(edge.id);if(placement)state.layoutHints.set(edge.id,{orientation:placement.orientation,col:placement.col,row:placement.row})});
   resistorIds.forEach(id=>state.layoutHints.delete(id));if(layoutHint)state.layoutHints.set(result.edge.id,layoutHint);
+  const nextLayout=relation.type==='series'?reduceSeriesGridLayout(state.gridLayout,resistorIds,result.edge.id):buildGridLayout(result.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints});
   if(tutorial.active&&tutorial.step===2&&action==='series')finishTutorial();
   countTurn();setMessage('');
-  animateToEquivalent(result.graph,result.edge.id,()=>{state.graph=result.graph;state.selected.clear();state.hinted.clear();if(isSolved(state.graph)&&calculationLevel){state.phase='total';render()}else if(isSolved(state.graph)){render();complete()}else{render();setMessage('Resistors combined.','good')}});
+  animateToEquivalent(result.graph,result.edge.id,nextLayout,()=>{state.graph=result.graph;state.gridLayout=nextLayout;state.selected.clear();state.hinted.clear();if(isSolved(state.graph)&&calculationLevel){state.phase='total';render()}else if(isSolved(state.graph)){render();complete()}else{render();setMessage('Resistors combined.','good')}});
 }
 
 function reject(text){countTurn();setMessage(text,'error');renderActions();syncTutorial();$('#circuit').querySelectorAll('.resistor.selected').forEach(el=>{el.classList.remove('wrong');void el.getBoundingClientRect();el.classList.add('wrong')})}
 
-function animateToEquivalent(nextGraph,equivalentId,done){
+function animateToEquivalent(nextGraph,equivalentId,nextLayout,done){
   const circuit=$('#circuit'),elements=[...circuit.querySelectorAll('.resistor')];
   const selected=elements.filter(el=>el.classList.contains('selected'));
   if(!selected.length){done();return}
-  const nextLayout=buildGridLayout(nextGraph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),equivalent=nextLayout.components.get(equivalentId),center=placement=>({x:(placement.col+.5)*100,y:(placement.row+.5)*100}),destination=center(equivalent),centerRow=state.gridLayout.components.get('SUPPLY')?.row??Math.floor(state.gridLayout.rows/2);
+  const equivalent=nextLayout.components.get(equivalentId),center=placement=>({x:(placement.col+.5)*100,y:(placement.row+.5)*100}),destination=center(equivalent),centerRow=state.gridLayout.components.get('SUPPLY')?.row??Math.floor(state.gridLayout.rows/2);
   const items=elements.map(el=>{const matrix=el.transform.baseVal.consolidate()?.matrix,bbox=el.getBBox(),x=matrix?.e||0,y=matrix?.f||0,chosen=el.classList.contains('selected'),from=state.gridLayout.components.get(el.dataset.id),to=chosen?equivalent:nextLayout.components.get(el.dataset.id),nextPosition=to?center(to):{x:x+bbox.width/2,y:y+bbox.height/2};return{el,x,y,cx:x+bbox.width/2,cy:y+bbox.height/2,chosen,destination:nextPosition,rotation:glideRotation(from,to,centerRow),labels:[...el.querySelectorAll('.rid,.ohms')]}});
   const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:760,start=performance.now();let crossed=false,ghost=null;
   const crossfade=raw=>{if(!crossed&&raw>=.72){ghost=circuit.cloneNode(true);ghost.removeAttribute('id');ghost.classList.add('circuit-ghost');circuit.parentElement.appendChild(ghost);crossed=true;done();circuit.style.opacity='0'}if(crossed){const fade=Math.min(1,(raw-.72)/.28);ghost.style.opacity=String(1-fade);circuit.style.opacity=String(fade)}};

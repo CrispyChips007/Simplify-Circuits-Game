@@ -234,6 +234,19 @@ export function buildGridLayout(graph,{source=graph.source??graph.nodes[0],sink=
   return layout;
 }
 
+export function reduceSeriesGridLayout(layout,selectedIds,equivalentId){
+  const selected=new Set(selectedIds),placements=selectedIds.map(id=>layout.components.get(id)).filter(Boolean);
+  if(placements.length!==selectedIds.length)throw new Error('Selected resistor is missing from the grid.');
+  const orientation=placements.some(item=>item.orientation==='vertical')?'vertical':'horizontal',average={col:placements.reduce((sum,item)=>sum+item.col,0)/placements.length,row:placements.reduce((sum,item)=>sum+item.row,0)/placements.length},minCol=Math.min(...placements.map(item=>item.col)),maxCol=Math.max(...placements.map(item=>item.col)),minRow=Math.min(...placements.map(item=>item.row)),maxRow=Math.max(...placements.map(item=>item.row)),expected=orientation==='vertical'?['N','S']:['E','W'];
+  const occupied=new Set([...layout.components].filter(([id])=>!selected.has(id)).map(([,item])=>cellKey(item.col,item.row))),candidates=[...layout.directions].flatMap(([key,ports])=>{const [col,row]=parseCell(key);return ports.size===2&&expected.every(port=>ports.has(port))&&col>=minCol&&col<=maxCol&&row>=minRow&&row<=maxRow&&!occupied.has(key)?[{col,row}]:[]});
+  candidates.sort((a,b)=>(Math.abs(a.col-average.col)+Math.abs(a.row-average.row))-(Math.abs(b.col-average.col)+Math.abs(b.row-average.row))||a.row-b.row||a.col-b.col);const target=candidates[0];
+  if(!target)throw new Error('No legal midpoint cell exists for the series reduction.');
+  const components=new Map([...layout.components].filter(([id])=>!selected.has(id)).map(([id,item])=>[id,{...item}]));components.set(equivalentId,{id:equivalentId,type:'resistor',orientation,...target});
+  const reduced={...layout,components,directions:new Map([...layout.directions].map(([key,ports])=>[key,new Set(ports)]))};
+  reduced.wires=[...reduced.directions].filter(([key])=>![...components.values()].some(item=>cellKey(item.col,item.row)===key)).map(([key,ports])=>{const [col,row]=parseCell(key);return{col,row,ports:[...ports].sort().join('')}});
+  return reduced;
+}
+
 export function validateGridLayout(layout){
   const issues=[],occupied=new Map();
   for(const component of layout.components.values()){

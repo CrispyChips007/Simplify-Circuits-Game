@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LEVELS } from '../dist/src/levels.js';
-import { buildGridLayout, glideRotation, GRID_COLS, GRID_ROWS, validateGridLayout } from '../dist/src/grid-layout.js';
+import { buildGridLayout, glideRotation, GRID_COLS, GRID_ROWS, reduceSeriesGridLayout, validateGridLayout } from '../dist/src/grid-layout.js';
 import { reduceGraph } from '../dist/src/solver.js';
 
 test('every level and reduction state fits the fixed circuit grid',()=>{
@@ -45,6 +45,15 @@ test('a reduced branch is centred within the widest parallel branch',()=>{
   const level=LEVELS[5],{before,after,equivalentId}=reduceWithPlacementHints(level,['R2','R3']),selected=['R2','R3'].map(id=>before.components.get(id)),equivalent=after.components.get(equivalentId);
   assert.equal(equivalent.col,(selected[0].col+selected[1].col)/2);
   assert.equal(equivalent.row,selected[0].row);
+});
+
+test('a partial series reduction keeps the circuit size and untouched resistors fixed',()=>{
+  const graph={nodes:['A','B','C','D'],source:'A',sink:'D',edges:[{id:'R1',a:'A',b:'B',value:2},{id:'R2',a:'B',b:'C',value:3},{id:'R3',a:'C',b:'D',value:4}]},before=buildGridLayout(graph),after=reduceSeriesGridLayout(before,['R1','R2'],'E1'),first=before.components.get('R1'),second=before.components.get('R2');
+  assert.equal(after.width,before.width);assert.equal(after.height,before.height);assert.deepEqual(after.components.get('R3'),before.components.get('R3'));assert.equal(after.components.get('E1').col,(first.col+second.col)/2);assert.equal(after.components.get('E1').row,(first.row+second.row)/2);assert.deepEqual(validateGridLayout(after),[]);
+});
+
+test('every valid series subset reduces in place without moving other components',()=>{
+  for(const level of LEVELS){const before=buildGridLayout(level.graph),ids=level.graph.edges.map(edge=>edge.id);for(let mask=1;mask<(1<<ids.length);mask++){const selected=ids.filter((_,index)=>mask&(1<<index)),result=reduceGraph(level.graph,selected);if(!result.ok||result.edge.history.type!=='series')continue;const after=reduceSeriesGridLayout(before,selected,result.edge.id);assert.equal(after.width,before.width,`level ${level.id} changed width`);assert.equal(after.height,before.height,`level ${level.id} changed height`);for(const id of ids.filter(id=>!selected.includes(id)))assert.deepEqual(after.components.get(id),before.components.get(id),`level ${level.id} moved ${id}`);assert.deepEqual(validateGridLayout(after),[],`level ${level.id} produced an invalid in-place reduction`)}}
 });
 
 test('orientation changes rotate top resistors counter-clockwise and bottom resistors clockwise',()=>{
