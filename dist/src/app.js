@@ -8,14 +8,15 @@ import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateAct
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
-const TEST_ALL_LEVELS=true;
+// const TEST_ALL_LEVELS=true;
+const TEST_ALL_LEVELS=false;
 const initialUnlocked=progress.unlocked;
-// TEMPORARY TESTING OVERRIDE — remove this entire block before public release.
+/* TEMPORARY TESTING OVERRIDE — uncomment this block when all levels need testing.
 // It deliberately ignores saved progression so every level can be tested after an update.
 {
   progress={...progress,unlocked:LEVELS.length};
 }
-// END TEMPORARY TESTING OVERRIDE.
+END TEMPORARY TESTING OVERRIDE. */
 let levelIndex=Math.max(0,Math.min(initialUnlocked-1,LEVELS.length-1));
 let state;
 const TUTORIAL_KEY='circuit-fold-tutorial-v1';
