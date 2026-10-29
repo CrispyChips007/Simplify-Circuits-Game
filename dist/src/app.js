@@ -159,7 +159,7 @@ function actions(){
     ['supply-series','VTotal = V1 + V2 + ⋯'],['supply-parallel','VTotal = V1 = V2 = ⋯'],
     ['current-divide','ITotal = VTotal ÷ RTotal'],['voltage-multiply','V = I × R'],
     ['same-current','Current is the same in series'],['same-voltage','Voltage is the same in parallel']
-  ],state.turns);
+  ],state.level.id-1);
   return rotateActions([
     ['series','<math aria-label="R total equals R one plus R two"><msub><mi>R</mi><mtext>Total</mtext></msub><mo>=</mo><msub><mi>R</mi><mn>1</mn></msub><mo>+</mo><msub><mi>R</mi><mn>2</mn></msub><mo>+</mo><mo>⋯</mo></math>'],
     ['parallel','<math aria-label="one over R total equals one over R one plus one over R two"><mfrac><mn>1</mn><msub><mi>R</mi><mtext>Total</mtext></msub></mfrac><mo>=</mo><mfrac><mn>1</mn><msub><mi>R</mi><mn>1</mn></msub></mfrac><mo>+</mo><mfrac><mn>1</mn><msub><mi>R</mi><mn>2</mn></msub></mfrac><mo>+</mo><mo>⋯</mo></math>'],
@@ -167,7 +167,7 @@ function actions(){
     ['voltage-multiply','<math aria-label="V equals I times R"><mi>V</mi><mo>=</mo><mi>I</mi><mo>×</mo><mi>R</mi></math>'],
     ['same-current','Current is the same in series'],
     ['same-voltage','Voltage is the same in parallel']
-  ],state.turns);
+  ],state.level.id-1);
 }
 
 function clearFormulaPrompt(){const prompt=$('#formulaPrompt');prompt.hidden=true;prompt.innerHTML=''}
@@ -175,7 +175,7 @@ function showFormulaPrompt(action,kind){const button=$(`#actions [data-action="$
 
 function renderActions(){
   $('#actions').className=`actions${state.level.mode!=='relation'?' formula-bank':''}`;
-  $('#actions').innerHTML=actions().map(([id,label])=>`<button class="action${label.includes('<math')?' formula':''}${['same-current','same-voltage'].includes(id)?' transfer-rule':''}" data-action="${id}">${label}</button>`).join('');
+  $('#actions').innerHTML=actions().map(([id,label])=>`<button class="action${label.includes('<math')?' formula':''}" data-action="${id}">${label}</button>`).join('');
   $('#actions').querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{submit(button.dataset.action);button.blur()}));
 }
 
@@ -230,7 +230,7 @@ function submit(action){
       if(plan.status==='incomplete'){incomplete(action,plan.missing.kind,plan.message);return}
       if(plan.status==='wrong'){reject(plan.message);return}
       const resistor=state.graph.edges.find(edge=>edge.id===plan.operation.edgeId),result=expandEdge(state.graph,resistor.id),property=plan.operation.property;
-      countTurn();if(currentTutorial.active&&action==='same-current')finishCurrentTutorial();state.layoutHints.delete(resistor.id);state.gridLayout=null;state.graph=result.graph;delete state.known[resistor.id];
+      countTurn();if(currentTutorial.active&&action==='same-current')finishCurrentTutorial();state.layoutHints.delete(resistor.id);state.gridLayout=null;state.gridViewport=null;state.graph=result.graph;delete state.known[resistor.id];
       result.graph.edges.filter(edge=>resistor.history.children.some(child=>child.id===edge.id)).forEach(edge=>{state.known[edge.id]={...(state.known[edge.id]||{}),[property]:true}});
       state.selected.clear();if(finishCalculationIfReady())return;render();setMessage(plan.message,'good');return
     }
