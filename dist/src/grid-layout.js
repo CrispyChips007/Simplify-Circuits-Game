@@ -73,9 +73,9 @@ function parallelPattern(children){
   const result={components:new Map(),connections:new Set(),left:null,right:null};
   const terminals=[];let rowOffset=0;
   children.forEach((child,index)=>{
-    mergeInto(result,child,0,rowOffset);
-    const left={col:0,row:child.left.row+rowOffset},childRight={col:child.right.col,row:child.right.row+rowOffset},right={col:width-1,row:childRight.row};
-    addCableRun(result.connections,childRight,right);terminals.push({left,right});
+    const colOffset=Math.floor((width-child.width)/2);mergeInto(result,child,colOffset,rowOffset);
+    const left={col:0,row:child.left.row+rowOffset},childLeft={col:child.left.col+colOffset,row:child.left.row+rowOffset},childRight={col:child.right.col+colOffset,row:child.right.row+rowOffset},right={col:width-1,row:childRight.row};
+    addCableRun(result.connections,left,childLeft);addCableRun(result.connections,childRight,right);terminals.push({left,right});
     rowOffset+=child.height+(index===children.length-1?0:1);
   });
   const firstRow=terminals[0].left.row,lastRow=terminals.at(-1).left.row;
