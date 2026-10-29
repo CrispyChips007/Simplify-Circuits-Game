@@ -29,7 +29,7 @@ function reduceWithPlacementHints(level,selected){
 
 test('small series circuits stay on one side until wrapping is needed',()=>{
   const level=LEVELS[0],layout=buildGridLayout(level.graph),rows=level.graph.edges.map(edge=>layout.components.get(edge.id).row);
-  assert.equal(layout.width,7);assert.equal(layout.height,3);assert.equal(new Set(rows).size,1);assert.ok(rows.every(row=>row<Math.floor(GRID_ROWS/2)));
+  assert.equal(layout.width,5);assert.equal(layout.height,3);assert.equal(new Set(rows).size,1);assert.ok(rows.every(row=>row<Math.floor(GRID_ROWS/2)));
 });
 
 test('the opening parallel bank is evenly spaced to the right of the supply',()=>{

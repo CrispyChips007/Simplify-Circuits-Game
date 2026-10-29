@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGrap
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-6';
+import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-7';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
@@ -65,8 +65,7 @@ function renderKnownValues(){
 
 function gridWireMarkup(layout){
   const lines=[...layout.connections].map(raw=>{const [left,right]=raw.split('|').map(value=>value.split(',').map(Number)),x1=(left[0]+.5)*100,y1=(left[1]+.5)*100,x2=(right[0]+.5)*100,y2=(right[1]+.5)*100;return`<path class="wire grid-wire" d="M${x1} ${y1} L${x2} ${y2}"/>`}).join('');
-  const junctions=layout.wires.filter(wire=>wire.ports.length>=3).map(wire=>`<circle class="grid-junction" cx="${(wire.col+.5)*100}" cy="${(wire.row+.5)*100}" r="6"/>`).join('');
-  return lines+junctions;
+  return lines;
 }
 
 function gridResistorMarkup(edge,placement){
