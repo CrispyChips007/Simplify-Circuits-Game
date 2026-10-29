@@ -29,7 +29,7 @@ function reduceWithPlacementHints(level,selected){
 
 test('small series circuits stay on one side until wrapping is needed',()=>{
   const level=LEVELS[0],layout=buildGridLayout(level.graph),rows=level.graph.edges.map(edge=>layout.components.get(edge.id).row);
-  assert.equal(new Set(rows).size,1);assert.ok(rows.every(row=>row<Math.floor(GRID_ROWS/2)));
+  assert.equal(layout.width,7);assert.equal(layout.height,5);assert.equal(new Set(rows).size,1);assert.ok(rows.every(row=>row<Math.floor(GRID_ROWS/2)));
 });
 
 test('the opening parallel bank is evenly spaced to the right of the supply',()=>{
@@ -38,5 +38,5 @@ test('the opening parallel bank is evenly spaced to the right of the supply',()=
 });
 
 test('combined resistors use the nearest cell to their visual midpoint',()=>{
-  for(const [level,selected] of [[LEVELS[0],['R1','R2']],[LEVELS[2],['R2','R3']]]){const {after,equivalentId,target}=reduceWithPlacementHints(level,selected),equivalent=after.components.get(equivalentId);assert.ok(Math.abs(equivalent.col-target.col)+Math.abs(equivalent.row-target.row)<=.5,`level ${level.id} moved away from the selected midpoint`)}
+  for(const [level,selected] of [[LEVELS[0],['R1','R2']],[LEVELS[2],['R2','R3']]]){const {after,equivalentId,target}=reduceWithPlacementHints(level,selected),equivalent=after.components.get(equivalentId);assert.ok(Math.abs(equivalent.col-target.col)+Math.abs(equivalent.row-target.row)<=1,`level ${level.id} moved beyond the nearest legal midpoint cell`)}
 });

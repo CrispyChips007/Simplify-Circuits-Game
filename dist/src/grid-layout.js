@@ -1,7 +1,8 @@
 export const GRID_COLS=11;
 export const GRID_ROWS=7;
-export const MIN_COLS=9;
+export const MIN_COLS=7;
 export const MIN_ROWS=5;
+const BRANCHED_MIN_COLS=9;
 
 const cellKey=(col,row)=>`${col},${row}`;
 const parseCell=key=>key.split(',').map(Number);
@@ -137,15 +138,6 @@ function perimeterPath(width,height,supplyRow){
   return result;
 }
 
-function compactPath(width,height,supplyRow){
-  const result=[];
-  for(let col=0;col<width;col++)result.push({col,row:supplyRow-1});
-  for(let row=supplyRow;row<height;row++)result.push({col:width-1,row});
-  for(let col=width-2;col>=0;col--)result.push({col,row:height-1});
-  for(let row=height-2;row>supplyRow;row--)result.push({col:0,row});
-  return result;
-}
-
 function pathOrientation(path,index){
   const previous=index===0?null:path[index-1],next=index===path.length-1?null:path[index+1];
   if(!previous||!next)return null;
@@ -172,7 +164,7 @@ function chooseSeriesSlots(path,edges,hints,colOffset,rowOffset){
 function buildSeriesRing(graph,source,sink,hints){
   const edges=orderedSeriesEdges(graph,source,sink);let width=MIN_COLS,height=MIN_ROWS,layout=null;
   while(!layout){
-    const supplyRow=Math.floor(height/2),path=edges.length<=3?compactPath(width,height,supplyRow):perimeterPath(width,height,supplyRow);
+    const supplyRow=Math.floor(height/2),path=perimeterPath(width,height,supplyRow);
     const colOffset=Math.floor((GRID_COLS-width)/2),rowOffset=Math.floor((GRID_ROWS-height)/2);
     try{layout={width,height,supply:{col:0,row:supplyRow,orientation:'vertical'},path,slots:chooseSeriesSlots(path,edges,hints,colOffset,rowOffset)}}catch(error){if(width<GRID_COLS)width++;else if(height<GRID_ROWS)height++;else throw error}
   }
@@ -195,7 +187,7 @@ function buildParallelBank(graph,hints){
 
 function buildBranchedLayout(graph,source,sink){
   const pattern=patternFromTree(decomposeSeriesParallel(graph,source,sink));
-  const width=Math.max(MIN_COLS,pattern.width),height=Math.max(MIN_ROWS,pattern.height+2);
+  const width=Math.max(BRANCHED_MIN_COLS,pattern.width),height=Math.max(MIN_ROWS,pattern.height+2);
   if(width>GRID_COLS||height>GRID_ROWS)throw new Error(`Circuit requires ${width}×${height} cells; fixed grid is ${GRID_COLS}×${GRID_ROWS}.`);
   const components=new Map(),connections=new Set(),patternRow=Math.floor((height-2-pattern.height)/2),patternCol=Math.floor((width-pattern.width)/2);
   mergeInto({components,connections},pattern,patternCol,patternRow);
