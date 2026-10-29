@@ -1,4 +1,4 @@
-import { LEVELS } from './levels.js?v=20261030-4';
+import { LEVELS } from './levels.js?v=20261030-5';
 import { cloneGraph, expandEdge, isSolved, relationship, reduceGraph, treeValues } from './solver.js?v=20261029-1';
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
@@ -216,16 +216,19 @@ function submit(action){
     const resistors=state.graph.edges;if(resistors.length<2||!resistors.every(edge=>spansSupply(edge,state.graph))){reject('The supply voltage is across the whole circuit, not just this parallel section.');return}
     countTurn();state.values=Object.fromEntries(resistors.map(edge=>[edge.id,{voltage:supplyVoltage(),current:supplyVoltage()/edge.value}]));state.known=Object.fromEntries(resistors.map(edge=>[edge.id,{current:false,voltage:true}]));state.selected.clear();render();return
   }
+  if(calculationLevel&&state.phase==='simplify'&&action==='current-divide'){
+    const resistorIds=selectedResistorIds();if(resistorIds.length>1){reject('Select one resistance.');return}const resistor=resistorIds.length===1?state.graph.edges.find(edge=>edge.id===resistorIds[0]):null,known=resistor?state.known[resistor.id]||{}:{},outcome=evaluateFormula({action,selected:state.selected,edge:resistor,known,knownByEdge:state.known,graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}countTurn(outcome);known.current=true;state.known[resistor.id]=known;state.selected.clear();if(finishCalculationIfReady())return;render();return
+  }
   if(calculationLevel&&state.phase==='simplify'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,'resistance');else reject('That rule cannot be applied to the selected values.');return}
   if(calculationLevel&&state.phase==='total'){
     const equivalent=state.graph.edges[0];
     if(action==='same-voltage'){
       if(!state.selected.has('SUPPLY')){incomplete(action,'voltage');return}
-      countTurn();state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:false,voltage:true}};state.selected.clear();render();return
+      countTurn();state.values=treeValues(equivalent,supplyVoltage());state.known={...state.known,[equivalent.id]:{current:false,voltage:true}};state.selected.clear();render();return
     }
     if(action!=='current-divide'){reject('That rule cannot determine an available circuit value.');return}
     const outcome=evaluateFormula({action,selected:state.selected,edge:equivalent,known:state.known[equivalent.id]||{},knownByEdge:state.known,graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}
-    countTurn(outcome);state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();return
+    countTurn(outcome);state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={...state.known,[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();return
   }
   if(calculationLevel&&state.phase==='expand'){
     const resistorIds=selectedResistorIds();
@@ -250,7 +253,7 @@ function submit(action){
   const selectedPlacements=resistorIds.map(id=>state.gridLayout?.components.get(id)).filter(Boolean),layoutHint=selectedPlacements.length?{orientation:selectedPlacements.some(item=>item.orientation==='vertical')?'vertical':'horizontal',col:selectedPlacements.reduce((sum,item)=>sum+item.col,0)/selectedPlacements.length,row:selectedPlacements.reduce((sum,item)=>sum+item.row,0)/selectedPlacements.length}:null;
   const result=reduceGraph(state.graph,resistorIds);
   if(!result.ok){reject(result.reason);return}
-  const sharedVoltage=relation.type==='parallel'&&resistorIds.every(id=>state.known[id]?.voltage)?state.values[resistorIds[0]]?.voltage:null;if(sharedVoltage!=null){resistorIds.forEach(id=>delete state.known[id]);state.known[result.edge.id]={current:false,voltage:true};state.values={...state.values,...treeValues(result.edge,sharedVoltage)}}
+  const sharedVoltage=relation.type==='parallel'&&resistorIds.every(id=>state.known[id]?.voltage)?state.values[resistorIds[0]]?.voltage:null;if(sharedVoltage!=null){state.known[result.edge.id]={current:false,voltage:true};state.values={...state.values,...treeValues(result.edge,sharedVoltage)}}
   state.graph.edges.forEach(edge=>{const placement=state.gridLayout?.components.get(edge.id);if(placement)state.layoutHints.set(edge.id,{orientation:placement.orientation,col:placement.col,row:placement.row})});
   resistorIds.forEach(id=>state.layoutHints.delete(id));if(layoutHint)state.layoutHints.set(result.edge.id,layoutHint);
   const inPlaceLayout=relation.type==='series'?reduceSeriesGridLayout(state.gridLayout,resistorIds,result.edge.id):reduceParallelGridLayout(state.gridLayout,resistorIds,result.edge.id),compactLayout=buildGridLayout(result.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),untouchedIds=state.graph.edges.map(edge=>edge.id).filter(id=>!resistorIds.includes(id)),nextLayout=chooseReducedGridLayout(state.gridLayout,inPlaceLayout,compactLayout,untouchedIds),nextViewport=nextLayout===compactLayout?viewportForLayout(compactLayout):state.gridViewport;
