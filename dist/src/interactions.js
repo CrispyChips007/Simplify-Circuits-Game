@@ -16,7 +16,7 @@ export function voltageToken(edgeId){return`VOLTAGE:${edgeId}`}
 
 const result=(status,message,{missing=null,operation=null}={})=>({status,countTurn:status!=='incomplete',message,missing,operation});
 
-export function evaluateFormula({action,selected,edge,known={},graph}){
+export function evaluateFormula({action,selected,edge,known={},knownByEdge={},graph}){
   if(!edge||!selected.has(edge.id))return result('incomplete','Select a resistance.',{missing:{kind:'resistance'}});
   if(action==='voltage-multiply'){
     if(known.voltage)return result('incomplete','That voltage is already known.');
@@ -31,7 +31,7 @@ export function evaluateFormula({action,selected,edge,known={},graph}){
     if(!voltages.length&&!supply)return result('incomplete','Select a voltage.',{missing:{kind:'voltage',ownerId:edge.id}});
     if(voltages.length+(supply?1:0)!==1)return result('wrong','Select one voltage for this resistance.');
     if(supply&&!spansSupply(edge,graph))return result('wrong','That voltage is not across this resistance.');
-    if(voltages.length&&(voltages[0]!==voltageToken(edge.id)||!known.voltage))return result('wrong','That voltage belongs to a different resistance.');
+    if(voltages.length){const sourceId=voltages[0].slice('VOLTAGE:'.length),source=graph.edges.find(item=>item.id===sourceId),sameVoltage=source&&endpointKey(source.a,source.b)===endpointKey(edge.a,edge.b),sourceKnown=sourceId===edge.id?known.voltage:knownByEdge[sourceId]?.voltage;if(!sameVoltage||!sourceKnown)return result('wrong','That voltage is not across this resistance.')}
     return result('correct','Current calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'current'}});
   }
   return result('wrong','That rule cannot determine a missing value here.');

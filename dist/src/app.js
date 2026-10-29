@@ -4,7 +4,7 @@ import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
 import { buildGridLayout, chooseReducedGridLayout, glideRotation, reduceParallelGridLayout, reduceSeriesGridLayout } from './grid-layout.js?v=20261029-12';
-import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, starsForTurns, transferPlan } from './interactions.js?v=20261029-2';
+import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, starsForTurns, transferPlan } from './interactions.js?v=20261029-3';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
@@ -220,7 +220,7 @@ function submit(action){
       countTurn();state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:false,voltage:true}};state.selected.clear();render();setMessage('Supply voltage applied to the total resistance.','good');return
     }
     if(action!=='current-divide'){reject('That rule cannot determine an available circuit value.');return}
-    const outcome=evaluateFormula({action,selected:state.selected,edge:equivalent,known:state.known[equivalent.id]||{},graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}
+    const outcome=evaluateFormula({action,selected:state.selected,edge:equivalent,known:state.known[equivalent.id]||{},knownByEdge:state.known,graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}
     countTurn(outcome);state.current=supplyVoltage()/equivalent.value;if(!state.values[equivalent.id])state.values=treeValues(equivalent,supplyVoltage());state.known={[equivalent.id]:{current:true,voltage:Boolean(state.known[equivalent.id]?.voltage)}};state.phase='expand';state.selected.clear();render();if(!currentTutorial.active)setMessage(`Iₜₒₜₐₗ = ${fmt(state.current)} A.`,'good');return
   }
   if(calculationLevel&&state.phase==='expand'){
@@ -236,7 +236,7 @@ function submit(action){
     }
     if(resistorIds.length>1){reject('Select one resistance.');return}
     const resistor=resistorIds.length===1?state.graph.edges.find(edge=>edge.id===resistorIds[0]):null,known=resistor?state.known[resistor.id]||{}:{};
-    const outcome=evaluateFormula({action,selected:state.selected,edge:resistor,known,graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}
+    const outcome=evaluateFormula({action,selected:state.selected,edge:resistor,known,knownByEdge:state.known,graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}
     countTurn(outcome);known[outcome.operation.property]=true;state.known[resistor.id]=known;state.selected.clear();if(finishCalculationIfReady())return;render();setMessage(outcome.message,'good');return
   }
   const resistorIds=selectedResistorIds();
