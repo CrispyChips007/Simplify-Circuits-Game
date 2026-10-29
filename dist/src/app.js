@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGrap
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-5';
+import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-6';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();

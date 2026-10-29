@@ -1,7 +1,7 @@
 export const GRID_COLS=11;
 export const GRID_ROWS=7;
 export const MIN_COLS=7;
-export const MIN_ROWS=5;
+export const MIN_ROWS=3;
 const BRANCHED_MIN_COLS=9;
 
 export function glideRotation(from,to,centerRow){
