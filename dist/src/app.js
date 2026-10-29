@@ -206,9 +206,9 @@ function submit(action){
   if(state.solved)return;clearFormulaPrompt();
   const calculationLevel=['complete','voltage'].includes(state.level.mode);
   if(state.phase==='supply'){
-    const expected=`supply-${state.level.supplyConnection}`,selected=[...state.selected].filter(id=>id.startsWith('SUPPLY:'));
+    const expected=state.level.supplyConnection==='parallel'?['supply-parallel','same-voltage']:['supply-series'],selected=[...state.selected].filter(id=>id.startsWith('SUPPLY:'));
     if(selected.length!==state.level.supplies.length){incomplete(action,'supply','Select all supplies in the bank.');return}
-    if(action!==expected){reject('That rule does not match how these supplies are connected.');return}
+    if(!expected.includes(action)){reject('That rule does not match how these supplies are connected.');return}
     const nextLayout=buildGridLayout(state.graph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),nextViewport=viewportForLayout(nextLayout);countTurn();setMessage('');animateSupplyBank(nextLayout,()=>{state.phase='simplify';state.selected.clear();state.gridLayout=nextLayout;state.gridViewport=nextViewport;render()});return
   }
   if(state.level.mode==='formula'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,'resistance');else reject('That rule cannot combine the selected resistors.');return}
