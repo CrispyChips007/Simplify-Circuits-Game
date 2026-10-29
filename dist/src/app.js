@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, relationship, reduceGraph, treeValues
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout, chooseReducedGridLayout, expandSeriesSupplyGridLayout, expandSupplyBankGridLayout, glideRotation, reduceParallelGridLayout, reduceSeriesGridLayout } from './grid-layout.js?v=20261030-18';
+import { buildGridLayout, chooseReducedGridLayout, expandSeriesSupplyGridLayout, expandSupplyBankGridLayout, glideRotation, reduceParallelGridLayout, reduceSeriesGridLayout } from './grid-layout.js?v=20261030-19';
 import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, starsForTurns, transferPlan } from './interactions.js?v=20261029-4';
 
 const $=selector=>document.querySelector(selector);
