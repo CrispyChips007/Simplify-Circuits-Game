@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LEVELS } from '../dist/src/levels.js';
-import { buildGridLayout, GRID_COLS, GRID_ROWS, validateGridLayout } from '../dist/src/grid-layout.js';
+import { buildGridLayout, glideRotation, GRID_COLS, GRID_ROWS, validateGridLayout } from '../dist/src/grid-layout.js';
 import { reduceGraph } from '../dist/src/solver.js';
 
 test('every level and reduction state fits the fixed circuit grid',()=>{
@@ -39,4 +39,11 @@ test('the opening parallel bank is evenly spaced to the right of the supply',()=
 
 test('combined resistors use the nearest cell to their visual midpoint',()=>{
   for(const [level,selected] of [[LEVELS[0],['R1','R2']],[LEVELS[2],['R2','R3']]]){const {after,equivalentId,target}=reduceWithPlacementHints(level,selected),equivalent=after.components.get(equivalentId);assert.ok(Math.abs(equivalent.col-target.col)+Math.abs(equivalent.row-target.row)<=1,`level ${level.id} moved beyond the nearest legal midpoint cell`)}
+});
+
+test('orientation changes rotate top resistors counter-clockwise and bottom resistors clockwise',()=>{
+  const vertical={orientation:'vertical',row:3};
+  assert.equal(glideRotation({orientation:'horizontal',row:1},vertical,3),-90);
+  assert.equal(glideRotation({orientation:'horizontal',row:5},vertical,3),90);
+  assert.equal(glideRotation({orientation:'vertical',row:1},vertical,3),0);
 });

@@ -3,7 +3,7 @@ import { cloneGraph, expandEdge, isSolved, nearlyEqual, relationship, reduceGrap
 import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014-38';
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
-import { buildGridLayout } from './grid-layout.js?v=20261029-4';
+import { buildGridLayout, glideRotation } from './grid-layout.js?v=20261029-5';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
@@ -279,11 +279,11 @@ function animateToEquivalent(nextGraph,equivalentId,done){
   const circuit=$('#circuit'),elements=[...circuit.querySelectorAll('.resistor')];
   const selected=elements.filter(el=>el.classList.contains('selected'));
   if(!selected.length){done();return}
-  const destination=circuitPosition(nextGraph,equivalentId);
-  const items=elements.map(el=>{const matrix=el.transform.baseVal.consolidate()?.matrix,bbox=el.getBBox(),x=matrix?.e||0,y=matrix?.f||0,chosen=el.classList.contains('selected'),nextPosition=chosen?destination:circuitPosition(nextGraph,el.dataset.id);return{el,x,y,cx:x+bbox.width/2,cy:y+bbox.height/2,chosen,destination:nextPosition}});
+  const nextLayout=buildGridLayout(nextGraph,{source:state.level.graph.source,sink:state.level.graph.sink,hints:state.layoutHints}),equivalent=nextLayout.components.get(equivalentId),center=placement=>({x:(placement.col+.5)*100,y:(placement.row+.5)*100}),destination=center(equivalent),centerRow=state.gridLayout.components.get('SUPPLY')?.row??Math.floor(state.gridLayout.rows/2);
+  const items=elements.map(el=>{const matrix=el.transform.baseVal.consolidate()?.matrix,bbox=el.getBBox(),x=matrix?.e||0,y=matrix?.f||0,chosen=el.classList.contains('selected'),from=state.gridLayout.components.get(el.dataset.id),to=chosen?equivalent:nextLayout.components.get(el.dataset.id),nextPosition=to?center(to):{x:x+bbox.width/2,y:y+bbox.height/2};return{el,x,y,cx:x+bbox.width/2,cy:y+bbox.height/2,chosen,destination:nextPosition,rotation:glideRotation(from,to,centerRow),labels:[...el.querySelectorAll('.rid,.ohms')]}});
   const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:760,start=performance.now();let crossed=false,ghost=null;
   const crossfade=raw=>{if(!crossed&&raw>=.72){ghost=circuit.cloneNode(true);ghost.removeAttribute('id');ghost.classList.add('circuit-ghost');circuit.parentElement.appendChild(ghost);crossed=true;done();circuit.style.opacity='0'}if(crossed){const fade=Math.min(1,(raw-.72)/.28);ghost.style.opacity=String(1-fade);circuit.style.opacity=String(fade)}};
-  const frame=now=>{const raw=duration?Math.min(1,(now-start)/duration):1,t=1-Math.pow(1-raw,3);items.forEach(item=>{const x=item.x+(item.destination.x-item.cx)*t,y=item.y+(item.destination.y-item.cy)*t;item.el.setAttribute('transform',`translate(${x} ${y})`);if(item.chosen)item.el.style.opacity=String(Math.max(.18,1-raw*.75))});crossfade(raw);if(raw<1)requestAnimationFrame(frame);else{if(!crossed)done();ghost?.remove();circuit.style.opacity=''}};
+  const frame=now=>{const raw=duration?Math.min(1,(now-start)/duration):1,t=1-Math.pow(1-raw,3),rotationRaw=Math.min(1,raw/.68),rotationT=1-Math.pow(1-rotationRaw,3);items.forEach(item=>{const x=item.x+(item.destination.x-item.cx)*t,y=item.y+(item.destination.y-item.cy)*t,angle=item.rotation*rotationT;item.el.setAttribute('transform',`translate(${x} ${y})${angle?` rotate(${angle} 50 50)`:''}`);item.labels.forEach(label=>label.setAttribute('transform',angle?`rotate(${-angle} 50 50)`:''));if(item.chosen)item.el.style.opacity=String(Math.max(.18,1-raw*.75))});crossfade(raw);if(raw<1)requestAnimationFrame(frame);else{if(!crossed)done();ghost?.remove();circuit.style.opacity=''}};
   requestAnimationFrame(frame);
 }
 function bestGroup(){

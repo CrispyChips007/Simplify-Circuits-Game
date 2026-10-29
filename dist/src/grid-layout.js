@@ -4,6 +4,11 @@ export const MIN_COLS=7;
 export const MIN_ROWS=5;
 const BRANCHED_MIN_COLS=9;
 
+export function glideRotation(from,to,centerRow){
+  if(!from||!to||from.orientation===to.orientation)return 0;
+  return from.row<centerRow?-90:90;
+}
+
 const cellKey=(col,row)=>`${col},${row}`;
 const parseCell=key=>key.split(',').map(Number);
 const connectionKey=(a,b)=>{
