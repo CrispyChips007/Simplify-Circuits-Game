@@ -14,6 +14,29 @@ export function rotateActions(actions,turns){
 export function currentToken(edgeId){return`CURRENT:${edgeId}`}
 export function voltageToken(edgeId){return`VOLTAGE:${edgeId}`}
 
+const result=(status,message,{missing=null,operation=null}={})=>({status,countTurn:status!=='incomplete',message,missing,operation});
+
+export function evaluateFormula({action,selected,edge,known={},graph}){
+  if(!edge||!selected.has(edge.id))return result('incomplete','Select a resistance.',{missing:{kind:'resistance'}});
+  if(action==='voltage-multiply'){
+    if(known.voltage)return result('incomplete','That voltage is already known.');
+    const currents=[...selected].filter(id=>id.startsWith('CURRENT:'));
+    if(!currents.length)return result('incomplete','Select a current.',{missing:{kind:'current',ownerId:edge.id}});
+    if(currents.length!==1||currents[0]!==currentToken(edge.id)||!known.current)return result('wrong','That current belongs to a different resistance.');
+    return result('correct','Voltage calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'voltage'}});
+  }
+  if(action==='current-divide'){
+    if(known.current)return result('incomplete','That current is already known.');
+    const voltages=[...selected].filter(id=>id.startsWith('VOLTAGE:')),supply=selected.has('SUPPLY');
+    if(!voltages.length&&!supply)return result('incomplete','Select a voltage.',{missing:{kind:'voltage',ownerId:edge.id}});
+    if(voltages.length+(supply?1:0)!==1)return result('wrong','Select one voltage for this resistance.');
+    if(supply&&!spansSupply(edge,graph))return result('wrong','That voltage is not across this resistance.');
+    if(voltages.length&&(voltages[0]!==voltageToken(edge.id)||!known.voltage))return result('wrong','That voltage belongs to a different resistance.');
+    return result('correct','Current calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'current'}});
+  }
+  return result('wrong','That rule cannot determine a missing value here.');
+}
+
 export function transferPlan({action,selected,graph}){
   const property=action==='same-current'?'current':action==='same-voltage'?'voltage':null;
   if(!property)return{status:'wrong',countTurn:true,message:'That rule cannot be used here.',operation:null};
@@ -28,4 +51,7 @@ export function transferPlan({action,selected,graph}){
 }
 
 export function turnDelta(outcome){return outcome?.countTurn?1:0}
+export function applyTurnOutcome(state,outcome){state.turns+=turnDelta(outcome);return state.turns}
+export function hintOutcome(){return result('correct','Hint used.')}
+export function starsForTurns(turns,best){return turns<=best?3:turns===best+1?2:1}
 

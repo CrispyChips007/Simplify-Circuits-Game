@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { currentToken, rotateActions, spansSupply, transferPlan, turnDelta, voltageToken } from '../dist/src/interactions.js';
+import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, spansSupply, starsForTurns, transferPlan, turnDelta, voltageToken } from '../dist/src/interactions.js';
 
 const graph={nodes:['A','B'],source:'A',sink:'B',edges:[]};
 const child=(id,a='A',b='B')=>({id,a,b,value:5});
@@ -15,3 +15,6 @@ test('supply can feed a parallel group across the supply',()=>{const circuit={..
 test('supply cannot feed an internal parallel group',()=>{const circuit={...graph,edges:[group('E1','parallel','A','C')]},plan=transferPlan({action:'same-voltage',selected:new Set(['SUPPLY']),graph:circuit});assert.equal(plan.status,'wrong')});
 test('missing values are incomplete and do not cost a turn',()=>{const circuit={...graph,edges:[group('E1','series')]},plan=transferPlan({action:'same-current',selected:new Set(),graph:circuit});assert.equal(plan.status,'incomplete');assert.equal(turnDelta(plan),0)});
 test('complete correct and wrong attempts cost one turn',()=>{assert.equal(turnDelta({status:'correct',countTurn:true}),1);assert.equal(turnDelta({status:'wrong',countTurn:true}),1)});
+test('formula evaluation distinguishes missing, wrong and correct operands',()=>{const edge=child('R1'),circuit={...graph,edges:[edge]};assert.equal(evaluateFormula({action:'current-divide',selected:new Set(),edge,known:{},graph:circuit}).status,'incomplete');assert.equal(evaluateFormula({action:'current-divide',selected:new Set(['R1']),edge,known:{},graph:circuit}).missing.kind,'voltage');assert.equal(evaluateFormula({action:'current-divide',selected:new Set(['R1','VOLTAGE:R2']),edge,known:{voltage:true},graph:circuit}).status,'wrong');assert.equal(evaluateFormula({action:'current-divide',selected:new Set(['R1','SUPPLY']),edge,known:{},graph:circuit}).status,'correct')});
+test('an already-known formula result is a free no-op',()=>{const edge=child('R1'),outcome=evaluateFormula({action:'voltage-multiply',selected:new Set(['R1','CURRENT:R1']),edge,known:{current:true,voltage:true},graph:{...graph,edges:[edge]}});assert.equal(outcome.status,'incomplete');assert.equal(outcome.countTurn,false);assert.equal(outcome.missing,null)});
+test('turn and star accounting ignores incomplete attempts but counts hints and mistakes',()=>{const state={turns:0};applyTurnOutcome(state,{status:'incomplete',countTurn:false});assert.equal(state.turns,0);applyTurnOutcome(state,{status:'wrong',countTurn:true});assert.equal(state.turns,1);applyTurnOutcome(state,hintOutcome());assert.equal(state.turns,2);assert.equal(starsForTurns(2,1),2);assert.equal(starsForTurns(1,1),3)});
