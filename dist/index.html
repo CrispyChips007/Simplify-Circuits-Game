@@ -7,7 +7,7 @@
   <title>Solve It — Circuit Puzzle Game</title>
   <meta name="description" content="Solve series and parallel circuit puzzles by combining resistors until only one remains.">
   <link rel="stylesheet" href="game.css?v=20261015-49">
-  <link rel="stylesheet" href="refinements.css?v=20261030-13">
+  <link rel="stylesheet" href="refinements.css?v=20261030-14">
   <link rel="stylesheet" href="./circuit-fold.css?v=20261016-4">
   </head>
 <body>
@@ -22,11 +22,8 @@
       <div class="level-line"><div><span id="levelNumber">LEVEL 1</span></div><div class="turns"><span>TURNS</span><strong id="turnCount">0</strong></div></div>
       <div class="prompt"><h1 id="promptTitle">How are these connected?</h1></div>
       <div class="reference-strip"><span>ORIGINAL CIRCUIT</span><svg id="referenceCircuit" viewBox="0 0 760 150" role="img" aria-label="Original circuit reference"></svg></div>
-      <div class="circuit-wrap"><svg id="circuit" viewBox="0 0 760 390" role="img" aria-label="Interactive electrical circuit"></svg><div class="selection-chip"><div class="selection-summary"><span>Selected</span><strong id="selectionText" class="empty">None</strong></div><p class="selection-feedback" id="message" aria-live="polite"></p></div></div>
+      <div class="play-area"><div class="board-column"><div class="circuit-wrap"><svg id="circuit" viewBox="0 0 760 390" role="img" aria-label="Interactive electrical circuit"></svg><div class="selection-chip"><div class="selection-summary"><span>Selected</span><strong id="selectionText" class="empty">None</strong></div><p class="selection-feedback" id="message" aria-live="polite"></p></div></div></div><div class="control-panel"><div class="formula-prompt" id="formulaPrompt" role="status" aria-live="polite" hidden></div><div class="actions" id="actions"></div><div class="under-actions"><button class="hint-button" id="hintButton">Hint <span>+1 turn</span></button><button class="restart-button" id="restartButton"><span aria-hidden="true">↻</span> Restart level</button><button class="result-button" id="resultButton" hidden>Finish level</button></div></div></div>
       <div class="tutorial-pointer" id="tutorialPointer" aria-hidden="true" hidden><span>☝</span><b>TAP</b></div>
-      <div class="formula-prompt" id="formulaPrompt" role="status" aria-live="polite" hidden></div>
-      <div class="actions" id="actions"></div>
-      <div class="under-actions"><button class="hint-button" id="hintButton">Hint <span>+1 turn</span></button><button class="restart-button" id="restartButton"><span aria-hidden="true">↻</span> Restart level</button><button class="result-button" id="resultButton" hidden>Finish level</button></div>
     </section>
     <aside class="ad ad-side" aria-label="Advertisement">Advertisement</aside>
   </main>
