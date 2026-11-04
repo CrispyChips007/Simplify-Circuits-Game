@@ -38,7 +38,7 @@ export function evaluateFormula({action,selected,edge,known={},knownByEdge={},gr
     if(voltages.length+(supply?1:0)!==1)return result('wrong','Select one voltage for this resistance.');
     if(supply&&!spansSupply(edge,graph))return result('wrong','That voltage is not across this resistance.');
     if(voltages.length){const sourceId=voltages[0].slice('VOLTAGE:'.length),source=graph.edges.find(item=>item.id===sourceId),sameVoltage=source&&endpointKey(source.a,source.b)===endpointKey(edge.a,edge.b),sourceKnown=sourceId===edge.id?known.voltage:knownByEdge[sourceId]?.voltage;if(!sameVoltage||!sourceKnown)return result('wrong','That voltage is not across this resistance.')}
-    return result('correct','Current calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'current',alsoKnown:voltages.length&&voltages[0]!==voltageToken(edge.id)?'voltage':null}});
+    return result('correct','Current calculated.',{operation:{type:'mark-known',edgeId:edge.id,property:'current',alsoKnown:supply||voltages.length&&voltages[0]!==voltageToken(edge.id)?'voltage':null}});
   }
   return result('wrong','That rule cannot determine a missing value here.');
 }

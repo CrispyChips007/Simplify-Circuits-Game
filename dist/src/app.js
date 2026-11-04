@@ -4,12 +4,12 @@ import { loadProgress, resetProgress, saveResult } from './storage.js?v=20261014
 import { levelSupply } from './supplies.js?v=20261014-38';
 import { calculationComplete } from './completion.js?v=20261015-53';
 import { buildGridLayout, chooseReducedGridLayout, expandSeriesSupplyGridLayout, expandSupplyBankGridLayout, glideRotation, reduceParallelGridLayout, reduceSeriesGridLayout } from './grid-layout.js?v=20261030-19';
-import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, spansSupply, starsForTurns, transferPlan } from './interactions.js?v=20261029-4';
+import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, spansSupply, starsForTurns, transferPlan } from './interactions.js?v=20261104-1';
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
-// const TEST_ALL_LEVELS=true;
-const TEST_ALL_LEVELS=false;
+const TEST_ALL_LEVELS=true;
+// const TEST_ALL_LEVELS=false;
 const initialUnlocked=progress.unlocked;
 /* TEMPORARY TESTING OVERRIDE — uncomment this block when all levels need testing.
 // It deliberately ignores saved progression so every level can be tested after an update.
@@ -215,10 +215,10 @@ function submit(action){
   if(state.level.mode==='formula'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,'resistance');else reject('That rule cannot combine the selected resistors.');return}
   if(calculationLevel&&state.phase==='simplify'&&action==='same-voltage'&&state.selected.has('SUPPLY')){
     const resistors=state.graph.edges;if(resistors.length<2||!resistors.every(edge=>spansSupply(edge,state.graph))){reject('The supply voltage is across the whole circuit, not just this parallel section.');return}
-    countTurn();state.values=Object.fromEntries(resistors.map(edge=>[edge.id,{voltage:supplyVoltage(),current:supplyVoltage()/edge.value}]));state.known=Object.fromEntries(resistors.map(edge=>[edge.id,{current:false,voltage:true}]));state.selected.clear();render();return
+    countTurn();state.values={...state.values,...Object.fromEntries(resistors.map(edge=>[edge.id,{voltage:supplyVoltage(),current:supplyVoltage()/edge.value}]))};state.known={...state.known,...Object.fromEntries(resistors.map(edge=>[edge.id,{...(state.known[edge.id]||{}),voltage:true}]))};state.selected.clear();if(finishCalculationIfReady())return;render();return
   }
   if(calculationLevel&&state.phase==='simplify'&&action==='current-divide'){
-    const resistorIds=selectedResistorIds();if(resistorIds.length>1){reject('Select one resistance.');return}const resistor=resistorIds.length===1?state.graph.edges.find(edge=>edge.id===resistorIds[0]):null,known=resistor?state.known[resistor.id]||{}:{},outcome=evaluateFormula({action,selected:state.selected,edge:resistor,known,knownByEdge:state.known,graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}countTurn(outcome);known.current=true;state.known[resistor.id]=known;state.selected.clear();if(finishCalculationIfReady())return;render();return
+    const resistorIds=selectedResistorIds();if(resistorIds.length>1){reject('Select one resistance.');return}const resistor=resistorIds.length===1?state.graph.edges.find(edge=>edge.id===resistorIds[0]):null,known=resistor?state.known[resistor.id]||{}:{},outcome=evaluateFormula({action,selected:state.selected,edge:resistor,known,knownByEdge:state.known,graph:state.graph});if(outcome.status!=='correct'){applyFailedOutcome(action,outcome);return}countTurn(outcome);known.current=true;if(outcome.operation.alsoKnown)known[outcome.operation.alsoKnown]=true;state.known[resistor.id]=known;state.selected.clear();if(finishCalculationIfReady())return;render();return
   }
   if(calculationLevel&&state.phase==='simplify'&&!['series','parallel'].includes(action)){if(!state.selected.size)incomplete(action,'resistance');else reject('That rule cannot be applied to the selected values.');return}
   if(calculationLevel&&state.phase==='total'){
