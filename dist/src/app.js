@@ -8,8 +8,8 @@ import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateAct
 
 const $=selector=>document.querySelector(selector);
 let progress=loadProgress();
-const TEST_ALL_LEVELS=true;
-// const TEST_ALL_LEVELS=false;
+// const TEST_ALL_LEVELS=true;
+const TEST_ALL_LEVELS=false;
 const initialUnlocked=progress.unlocked;
 /* TEMPORARY TESTING OVERRIDE — uncomment this block when all levels need testing.
 // It deliberately ignores saved progression so every level can be tested after an update.
@@ -320,7 +320,7 @@ function showResult(){
   $('#completeDialog').showModal();
 }
 
-$('#hintButton').addEventListener('click',hint);$('#restartButton').addEventListener('click',()=>loadLevel(levelIndex));$('#resultButton').addEventListener('click',showResult);$('#levelsButton').addEventListener('click',()=>{renderLevels();$('#levelsDialog').showModal()});$('#tutorialStart').addEventListener('click',()=>{const replay=!tutorial.firstPlay;$('#howDialog').close();if(replay)startTutorial()});$('#howDialog').addEventListener('close',()=>{if(tutorial.firstPlay&&!tutorial.active)startTutorial()});$('#nextButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(Math.min(levelIndex+1,LEVELS.length-1))});$('#replayButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(levelIndex)});$('#startAgainButton').addEventListener('click',()=>{progress=resetProgress();progress={...progress,unlocked:LEVELS.length}; // TEMP: keep all levels unlocked during testing.
+$('#hintButton').addEventListener('click',hint);$('#restartButton').addEventListener('click',()=>loadLevel(levelIndex));$('#resultButton').addEventListener('click',showResult);$('#levelsButton').addEventListener('click',()=>{renderLevels();$('#levelsDialog').showModal()});$('#tutorialStart').addEventListener('click',()=>{const replay=!tutorial.firstPlay;$('#howDialog').close();if(replay)startTutorial()});$('#howDialog').addEventListener('close',()=>{if(tutorial.firstPlay&&!tutorial.active)startTutorial()});$('#nextButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(Math.min(levelIndex+1,LEVELS.length-1))});$('#replayButton').addEventListener('click',()=>{$('#completeDialog').close();loadLevel(levelIndex)});$('#startAgainButton').addEventListener('click',()=>{progress=resetProgress();/* TESTING: progress={...progress,unlocked:LEVELS.length}; */
 $('#chapterDialog').close();loadLevel(0)});$('#reviewLevelsButton').addEventListener('click',()=>{$('#chapterDialog').close();renderLevels();$('#levelsDialog').showModal()});document.addEventListener('click',event=>{if(event.target.dataset.open)$(`#${event.target.dataset.open}`).showModal();if(event.target.dataset.close)$(`#${event.target.dataset.close}`).close()});
 addEventListener('resize',applyResponsiveViewBoxes);
 loadLevel(levelIndex);
