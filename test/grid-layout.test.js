@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LEVELS } from '../learning/solvit/src/levels.js';
-import { buildGridLayout, chooseReducedGridLayout, glideRotation, GRID_COLS, GRID_ROWS, MIN_COLS, MIN_ROWS, reduceParallelGridLayout, reduceSeriesGridLayout, validateGridLayout } from '../learning/solvit/src/grid-layout.js';
+import { buildGridLayout, chooseReducedGridLayout, glideFrame, glideRotation, GRID_COLS, GRID_ROWS, MIN_COLS, MIN_ROWS, reduceParallelGridLayout, reduceSeriesGridLayout, validateGridLayout } from '../learning/solvit/src/grid-layout.js';
 import { reduceGraph } from '../learning/solvit/src/solver.js';
 
 test('every level and reduction state fits the fixed circuit grid',()=>{
@@ -71,7 +71,16 @@ test('every valid parallel subset keeps untouched resistors fixed while shrinkin
 
 test('orientation changes rotate top resistors counter-clockwise and bottom resistors clockwise',()=>{
   const vertical={orientation:'vertical',row:3};
-  assert.equal(glideRotation({orientation:'horizontal',row:1},vertical,3),-90);
-  assert.equal(glideRotation({orientation:'horizontal',row:5},vertical,3),90);
+  assert.equal(glideRotation({orientation:'horizontal',row:1},vertical,3),90);
+  assert.equal(glideRotation({orientation:'horizontal',row:5},vertical,3),-90);
   assert.equal(glideRotation({orientation:'vertical',row:1},vertical,3),0);
+});
+
+test('glide rotation tracks the share of travel completed',()=>{
+  const item={x:0,y:0,cx:50,cy:50,target:{x:250,y:150},rotation:90};
+  assert.deepEqual(glideFrame(item,0),{angle:0,transform:'translate(0 0)'});
+  assert.equal(glideFrame(item,.5).angle,45);
+  assert.equal(glideFrame(item,.5).transform,'translate(100 50) rotate(45 50 50)');
+  assert.deepEqual(glideFrame(item,1),{angle:90,transform:'translate(200 100) rotate(90 50 50)'});
+  assert.equal(glideFrame({...item,rotation:0},.5).transform,'translate(100 50)');
 });

@@ -6,7 +6,14 @@ const BRANCHED_MIN_COLS=9;
 
 export function glideRotation(from,to,centerRow){
   if(!from||!to||from.orientation===to.orientation)return 0;
-  return from.row<centerRow?-90:90;
+  return from.row<centerRow?90:-90;
+}
+
+// One frame of a glide: rotation progress follows the share of the journey travelled, so a
+// component reaches its final orientation exactly as it arrives. Rotation is about the cell centre.
+export function glideFrame({x,y,cx,cy,target,rotation},progress){
+  const t=Math.max(0,Math.min(1,progress)),angle=rotation*t,tx=x+(target.x-cx)*t,ty=y+(target.y-cy)*t;
+  return{angle,transform:`translate(${tx} ${ty})${angle?` rotate(${angle} 50 50)`:''}`};
 }
 
 const cellKey=(col,row)=>`${col},${row}`;
