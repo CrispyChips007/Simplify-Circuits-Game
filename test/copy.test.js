@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const playerCopy=[
-  readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'),
-  readFileSync(new URL('../dist/src/app.js',import.meta.url),'utf8'),
-  readFileSync(new URL('../dist/src/interactions.js',import.meta.url),'utf8'),
-  readFileSync(new URL('../dist/src/solver.js',import.meta.url),'utf8')
+  readFileSync(new URL('../learning/solvit/index.html',import.meta.url),'utf8'),
+  readFileSync(new URL('../learning/solvit/src/app.js',import.meta.url),'utf8'),
+  readFileSync(new URL('../learning/solvit/src/interactions.js',import.meta.url),'utf8'),
+  readFileSync(new URL('../learning/solvit/src/solver.js',import.meta.url),'utf8')
 ].join('\n');
 
 test('player feedback avoids internal circuit-graph language',()=>{

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, sharesSeriesCurrent, spansSupply, starsForTurns, transferPlan, turnDelta, voltageToken } from '../dist/src/interactions.js';
+import { applyTurnOutcome, currentToken, evaluateFormula, hintOutcome, rotateActions, sharesSeriesCurrent, spansSupply, starsForTurns, transferPlan, turnDelta, voltageToken } from '../learning/solvit/src/interactions.js';
 
 const graph={nodes:['A','B'],source:'A',sink:'B',edges:[]};
 const child=(id,a='A',b='B')=>({id,a,b,value:5});

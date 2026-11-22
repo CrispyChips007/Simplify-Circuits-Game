@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LEVELS } from '../dist/src/levels.js';
-import { reduceGraph } from '../dist/src/solver.js';
+import { LEVELS } from '../learning/solvit/src/levels.js';
+import { reduceGraph } from '../learning/solvit/src/solver.js';
 
 const treeKey=edge=>edge.history?`${edge.history.type}(${edge.history.children.map(treeKey).sort().join(',')})`:edge.id;
 const graphKey=graph=>graph.edges.map(edge=>`${[edge.a,edge.b].sort().join('-')}:${treeKey(edge)}`).sort().join('|');

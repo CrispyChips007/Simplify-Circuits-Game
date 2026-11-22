@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LEVELS } from '../dist/src/levels.js';
-import { buildGridLayout, chooseReducedGridLayout, glideRotation, GRID_COLS, GRID_ROWS, MIN_COLS, MIN_ROWS, reduceParallelGridLayout, reduceSeriesGridLayout, validateGridLayout } from '../dist/src/grid-layout.js';
-import { reduceGraph } from '../dist/src/solver.js';
+import { LEVELS } from '../learning/solvit/src/levels.js';
+import { buildGridLayout, chooseReducedGridLayout, glideRotation, GRID_COLS, GRID_ROWS, MIN_COLS, MIN_ROWS, reduceParallelGridLayout, reduceSeriesGridLayout, validateGridLayout } from '../learning/solvit/src/grid-layout.js';
+import { reduceGraph } from '../learning/solvit/src/solver.js';
 
 test('every level and reduction state fits the fixed circuit grid',()=>{
   for(const level of LEVELS){

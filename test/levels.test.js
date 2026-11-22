@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LEVELS } from '../dist/src/levels.js';
-import { loadProgress, saveResult } from '../dist/src/storage.js';
-import { isSolved, nearlyEqual, reduceGraph, solveCircuit, treeValues } from '../dist/src/solver.js';
-import { combineSupplies, levelSupply } from '../dist/src/supplies.js';
-import { CIRCUIT_FRAME, COMPONENT_SIZE, componentSize, graphIsParallelBank, graphIsSeriesPath, validateCustomLayout } from '../dist/src/layout.js';
+import { LEVELS } from '../learning/solvit/src/levels.js';
+import { loadProgress, saveResult } from '../learning/solvit/src/storage.js';
+import { isSolved, nearlyEqual, reduceGraph, solveCircuit, treeValues } from '../learning/solvit/src/solver.js';
+import { combineSupplies, levelSupply } from '../learning/solvit/src/supplies.js';
+import { CIRCUIT_FRAME, COMPONENT_SIZE, componentSize, graphIsParallelBank, graphIsSeriesPath, validateCustomLayout } from '../learning/solvit/src/layout.js';
 
 test('course contains sequential levels',()=>{
   assert.equal(LEVELS.length,31);

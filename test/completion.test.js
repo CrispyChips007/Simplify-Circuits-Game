@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculationComplete } from '../dist/src/completion.js';
-import { LEVELS } from '../dist/src/levels.js';
-import { levelSupply } from '../dist/src/supplies.js';
+import { calculationComplete } from '../learning/solvit/src/completion.js';
+import { LEVELS } from '../learning/solvit/src/levels.js';
+import { levelSupply } from '../learning/solvit/src/supplies.js';
 
 test('final level combines two 12 volt supplies into 24 volts',()=>{
   const level=LEVELS.at(-1);

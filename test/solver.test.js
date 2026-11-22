@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { relationship, reduceGraph, isSolved, nearlyEqual, solveCircuit, expandEdge, treeValues } from '../dist/src/solver.js';
+import { relationship, reduceGraph, isSolved, nearlyEqual, solveCircuit, expandEdge, treeValues } from '../learning/solvit/src/solver.js';
 const e=(id,a,b,value)=>({id,a,b,value});
 const parallel={nodes:['A','B'],edges:[e('R1','A','B',12),e('R2','A','B',24),e('R3','A','B',8)],nextId:1};
 test('any parallel pair is valid',()=>{for(const pair of [['R1','R2'],['R1','R3'],['R2','R3']])assert.equal(relationship(parallel,pair).type,'parallel')});

@@ -5,21 +5,21 @@ A dependency-free browser game for identifying and simplifying series/parallel n
 ## Run locally
 
 ```powershell
-python -m http.server 8000 --directory dist
+python -m http.server 8000 --directory learning
 ```
 
-Then open <http://localhost:8000>.
+Then open <http://localhost:8000/solvit/>.
 
 ## Structure
 
-- `dist/index.html` — page structure
-- `dist/game.css` — responsive visual design
-- `dist/src/solver.js` — connectivity-based series/parallel solver
-- `dist/src/app.js` — circuit interactions and progression
+- `learning/solvit/index.html` — page structure
+- `learning/solvit/game.css` — responsive visual design
+- `learning/solvit/src/solver.js` — connectivity-based series/parallel solver
+- `learning/solvit/src/app.js` — circuit interactions and progression
 - `test/solver.test.js` — reduction, expansion, and electrical-value tests
 - `test/levels.test.js` — course sequence, geometry, and supply tests
 
-The `dist` directory is ready for static hosting such as GitHub Pages.
+The `learning` directory is the site root (deployed to learn.interactiveelectronics.com.au). Each game or lesson lives in its own subfolder, e.g. `learning/solvit/` → `/solvit/`.
 
 ## Test
 
